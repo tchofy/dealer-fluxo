@@ -1,0 +1,90 @@
+name: Testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:        # botão "Run workflow" na aba Actions
+
+concurrency:
+  group: testes-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Sem DealerNet e sem senha: build, validação do pacote do Firefox e sintaxe
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build
+        run: python3 extensao/build.py
+      - name: O build não muda o código versionado (trecho do tema e versões em dia)
+        run: git diff --exit-code
+      - name: Validação do Firefox (a mesma da addons.mozilla.org)
+        run: npx --yes web-ext@8 lint --source-dir extensao/build/firefox --warnings-as-errors
+      - name: Sintaxe
+        run: |
+          for f in userscript.js extensao/src/*.js legado/*.user.js; do node --check "$f" || exit 1; done
+          python3 -m py_compile extensao/*.py extensao/loja/*.py testes/*.py
+
+  # Servidor de estatísticas: testes com banco local (inclusive os de ataque), sem conta da Cloudflare
+  servidor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: servidor
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: servidor/package-lock.json
+      - run: npm ci
+      - run: npx vitest run
+      - name: Sintaxe do relatório
+        run: python3 -m py_compile relatorio.py
+
+  # Testes de verdade no DealerNet, com a conta de testes (segredos DN_URL, DN_USUARIO e DN_SENHA do repositório).
+  # Só rodam no repositório principal (forks e pull requests de fora não recebem os segredos).
+  dealernet:
+    needs: verificar
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        navegador: [chromium, firefox]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Playwright
+        run: |
+          pip install playwright
+          python3 -m playwright install --with-deps ${{ matrix.navegador }}
+      - name: Som (a máquina do GitHub não tem placa de som; os testes do som de fluxos precisam de uma saída)
+        run: |
+          sudo apt-get install -y --no-install-recommends pulseaudio
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=nula
+          pactl set-default-sink nula
+      - name: Build
+        run: python3 extensao/build.py
+      - name: Testes (${{ matrix.navegador }})
+        env:
+          DN_URL: ${{ secrets.DN_URL }}
+          DN_USUARIO: ${{ secrets.DN_USUARIO }}
+          DN_SENHA: ${{ secrets.DN_SENHA }}
+        run: python3 testes/testar.py --extensao --navegador ${{ matrix.navegador }} --tela 1280x720
+      # As capturas das falhas (testes/resultados) não são publicadas: podem mostrar dados reais do portal.

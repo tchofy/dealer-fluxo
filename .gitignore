@@ -1,0 +1,14 @@
+# Gerados pelo build (os zips de cada versão vão para as lojas, não para o repositório)
+extensao/build/
+extensao/dist/
+# Testes: capturas de tela das falhas (podem ter dados reais do portal) e os dados a esconder nas capturas
+testes/resultados/
+testes/anonimizar.local.json
+# Vídeo de divulgação (fica no YouTube; grande demais para o repositório)
+extensao/loja/*.mp4
+__pycache__/
+# Servidor de estatísticas (Cloudflare Worker): dependências, estado local do wrangler e arquivos do editor
+servidor/node_modules/
+servidor/.wrangler/
+servidor/.vscode/
+servidor/AGENTS.md

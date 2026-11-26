@@ -1,0 +1,10 @@
+{
+    "type": "object",
+    "properties": {
+        "telemetria": {
+            "title": "Estatísticas de uso anônimas",
+            "description": "false desliga o envio das estatísticas de uso anônimas do Dealer/Fluxo para todos os usuários.",
+            "type": "boolean"
+        }
+    }
+}

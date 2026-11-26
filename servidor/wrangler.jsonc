@@ -1,0 +1,31 @@
+/**
+ * Dealer/Fluxo: endpoint do ping diário de uso (sem ID, sem IP, sem localização).
+ * Configuração do Wrangler: https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "dealer-fluxo-ping",
+	"main": "src/index.js",
+	"compatibility_date": "2026-11-23",
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "dealer-fluxo-pings",
+			"database_id": "64ba3c85-2316-4052-a7f7-d91b974ca6b2"
+		}
+	],
+	// Limite geral de gravações (/ping e /semicone): 60 por minuto em cada local da Cloudflare. Muito acima do uso
+	// normal (um envio por instalação por dia); segura quem tentar encher o banco de envios falsos.
+	"ratelimits": [
+		{
+			"name": "LIMITE",
+			"namespace_id": "1001",
+			"simple": { "limit": 60, "period": 60 }
+		}
+	],
+	// Desligado de propósito: os logs da Cloudflare guardariam dados da requisição (inclusive o IP)
+	"observability": {
+		"enabled": false
+	},
+	"upload_source_maps": true
+}

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <title>Dealer/Fluxo - Configurações</title>
+    <link rel="stylesheet" href="sites.css">
+</head>
+<body data-modo="opcoes">
+    <header>
+        <img src="icones/icone32.png" alt="">
+        <h1>Dealer/Fluxo</h1>
+        <span id="versao"></span>
+    </header>
+    <h2>Sites com o Dealer/Fluxo</h2>
+    <ul id="sites"></ul>
+    <p id="semSites" class="dica" hidden>Nenhum site adicionado.</p>
+    <p class="dica">Para adicionar o DealerNet da sua empresa, entre nele e, na página que abre depois do login, clique no
+        botão do Dealer/Fluxo na barra de ferramentas do navegador e em <b>Ativar Dealer/Fluxo neste site</b>.</p>
+    <p id="mensagem" hidden></p>
+    <h2>Outras configurações</h2>
+    <p class="dica">Atalhos, barra de tarefas e notificação de fluxos ficam dentro do DealerNet: na página que abre depois do
+        login, clique na engrenagem (⚙) na barra de status, no canto inferior direito.</p>
+    <h2>Estatísticas de uso</h2>
+    <p class="dica">O Dealer/Fluxo envia estatísticas de uso anônimas uma vez por dia (versão, navegador, sistema, faixa de
+        largura da tela e as escolhas de tema e fonte), sem nenhum identificador, IP ou dado do DealerNet. Ligue ou desligue
+        dentro do DealerNet, em ⚙ &gt; Configurações &gt; Privacidade.
+        <a href="https://dealer-fluxo-ping.igorslime.workers.dev/privacidade" target="_blank" rel="noopener">Política de privacidade</a></p>
+    <section id="dadosFirefox" hidden>
+        <p class="dica">No Firefox, o navegador também controla o que a extensão pode enviar (as mesmas opções ficam em
+            about:addons &gt; Dealer/Fluxo &gt; Permissões):</p>
+        <p>Estatísticas de uso: <b id="estadoUso"></b></p>
+        <p>Imagens sem ícone do tema: <b id="estadoSemIcone"></b>
+            <button type="button" id="permitirSemIcone" class="secundario" hidden>Permitir o envio</button>
+            <button type="button" id="retirarSemIcone" class="secundario" hidden>Não permitir mais</button></p>
+        <p class="dica">As imagens sem ícone só são enviadas se, além disto, a opção estiver marcada na aba Tema das
+            configurações dentro do DealerNet.</p>
+    </section>
+    <script src="sites.js"></script>
+</body>
+</html>

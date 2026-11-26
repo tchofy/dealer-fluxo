@@ -1,0 +1,25 @@
+Extensão não oficial para o DealerNet Workflow: barra de tarefas com as janelas abertas, atalhos de teclado, aviso de novos fluxos, busca nas listas de opções, avisos das telas em destaque e temas de cores (alfa).
+
+O QUE ELA FAZ
+- Barra de tarefas no rodapé com as janelas abertas: clique para alternar, arraste para reordenar, botão do meio fecha. Clique direito: minimizar, voltar ao início da tela, duplicar, fechar e reabrir janelas fechadas.
+- Atalhos de teclado que funcionam mesmo com o cursor dentro das telas (Alt+Q/E para trocar de janela, Alt+S para minimizar, Alt+Shift+T para reabrir, entre outros), todos configuráveis.
+- Aparência dos botões da barra à sua escolha: 12 formatos (cantos arredondados, pílula, setas encaixadas, círculo com as iniciais...), 8 preenchimentos (gradiente, vidro fosco, relevo...) e efeitos ao passar o mouse e ao abrir uma janela, com estilos prontos e prévia na hora.
+- Indicador de carregamento no botão de cada janela e um ✔ quando uma consulta termina em segundo plano.
+- Aviso de novos fluxos na Caixa de Entrada (desligado por padrão), com sino no alto da tela, som opcional (vários sons e volume) e escolha de quais fluxos avisar.
+- As mensagens em vermelho das telas aparecem também no meio da tela, com botões para copiar o texto e fechar.
+- Busca nas listas de opções com muitos itens (no alto da lista aberta, no botão de lupa ou com Alt+F), tolerante a erros de digitação e acentos. Digitar o começo da opção continua funcionando.
+- Na impressão da OS, os documentos marcados (termos, comprovantes) abrem cada um numa janela, prontos para imprimir, em vez de virem num ZIP.
+- Busca nas configurações, com os campos ali mesmo no resultado.
+- Temas de cores claros e escuros, fonte e tamanho do texto (versão alfa, desligados por padrão).
+
+Funciona no portal em *.dealernetworkflow.com.br. Se a sua empresa usa o sistema em outro endereço, ative a extensão nele pelo botão dela na barra do navegador.
+
+PRIVACIDADE
+Uma vez por dia, a extensão envia estatísticas de uso anônimas: versão, navegador, sistema operacional, faixa da largura da tela, se o portal está no endereço padrão, altura da barra e as escolhas de tema e fonte. Nunca envia usuário, empresa, endereço do portal, conteúdo das telas, nenhum identificador nem o IP. Dá para desligar em ⚙ > Configurações > Privacidade, ou nas permissões da extensão no Firefox. Opcional e desligado por padrão: enviar a lista de imagens que o tema ainda não troca, para ajudar a completar os ícones. Se você escolher uma fonte "da internet" no tema, ela é baixada uma vez do Bunny Fonts (ou do Google Fonts).
+Política de privacidade: https://dealer-fluxo-ping.igorslime.workers.dev/privacidade
+
+APOIO
+Na aba "Sobre" das configurações há a opção de fazer uma doação por Pix, de qualquer valor. É opcional: nenhum recurso fica bloqueado por doação.
+
+AVISO
+O Dealer/Fluxo não é oficial e não tem relação com a DealerNet. Antes de abrir um chamado de suporte do sistema, desative a extensão e veja se o problema continua.

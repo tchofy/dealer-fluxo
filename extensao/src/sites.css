@@ -1,0 +1,39 @@
+:root {
+    --fundo: #ffffff; --texto: #222; --suave: #666; --borda: #d8d8d8; --linha: #f3f3f3;
+    --destaque: #15428b; --destaque-texto: #fff; --ok: #1e7e34; --erro: #b3261e;
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --fundo: #202124; --texto: #e8eaed; --suave: #a0a4a8; --borda: #3c4043; --linha: #2a2b2e;
+        --destaque: #8ab4f8; --destaque-texto: #202124; --ok: #81c995; --erro: #f28b82;
+    }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fundo); color: var(--texto); font: 13px/1.45 system-ui, sans-serif; }
+body[data-modo="popup"] { width: 340px; padding: 12px 14px 14px; }
+body[data-modo="opcoes"] { max-width: 560px; margin: 0 auto; padding: 24px 16px; }
+header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+header img { width: 24px; height: 24px; }
+header h1 { font-size: 15px; margin: 0; flex: 1; }
+#versao { color: var(--suave); font-size: 11px; }
+h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--suave); margin: 14px 0 6px; }
+p { margin: 6px 0; }
+.estado.ativo { color: var(--ok); font-weight: 600; }
+.dica { color: var(--suave); font-size: 12px; }
+button { font: inherit; cursor: pointer; border-radius: 4px; }
+button.principal, button.secundario { width: 100%; padding: 7px 10px; margin: 4px 0; font-weight: 600; }
+button.principal { background: var(--destaque); color: var(--destaque-texto); border: 1px solid var(--destaque); }
+button.secundario { background: transparent; color: var(--texto); border: 1px solid var(--borda); }
+button.principal:hover { filter: brightness(1.1); }
+ul { list-style: none; margin: 0; padding: 0; border: 1px solid var(--borda); border-radius: 4px; }
+li { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-top: 1px solid var(--linha); min-height: 34px; }
+li:first-child { border-top: none; }
+.endereco { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rotulo { color: var(--suave); font-size: 11px; }
+button.remover { background: transparent; color: var(--erro); border: 1px solid transparent; padding: 2px 8px; }
+button.remover:hover { border-color: var(--erro); }
+#mensagem { padding: 6px 8px; border-radius: 4px; border: 1px solid; margin-top: 10px; }
+#mensagem.ok { color: var(--ok); }
+#mensagem.erro { color: var(--erro); }
+a { color: var(--destaque); }
+footer { margin-top: 12px; font-size: 12px; }
