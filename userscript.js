@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         DealerBarraDeTarefas
-// @version      1.2.1
+// @version      1.3.0
 // @description  Dealer/Fluxo: barra de tarefas com as janelas abertas no DealerNet, atalhos de teclado, indicador de carregamento, notificação de novos fluxos e temas de cores (alfa).
 // @author       Igor Lima
 // @match        *://*/Portal/default.html*
@@ -69,7 +69,7 @@
 // "Tema Escuro"; o trecho abaixo é copiado de lá por extensao/build.py. Na extensão ele é um content script
 // próprio (dealer-tema.js) e este trecho não vai junto. As opções ficam em Configurações > Tema.
 // ==== Dealer/Tema (gerado a partir de ../Tema Escuro/dealer-tema.lib.js, não editar aqui) ====
-// Dealer/Tema 1.17.7 — biblioteca de temas de cores para o DealerNet Workflow.
+// Dealer/Tema 1.17.8 — biblioteca de temas de cores para o DealerNet Workflow.
 // Usada só embutida no Dealer/Fluxo (não é um userscript instalável sozinho). Fonte única: este arquivo,
 // copiado sem alterações para dentro do Dealer/Fluxo pelo build dele. Como integrar e a API
 // (window.DealerTema): INTEGRACAO-DEALER-FLUXO.md. Precisa rodar em document-start no Portal/default.html, no LoginAux.aspx (tela de login) e no wp_esqueciminhasenha.aspx.
@@ -108,9 +108,49 @@ function dealerTema(window, document) {
     if (document.__dealerTema || window.location.protocol === 'about:') return;
     document.__dealerTema = true;
 
-    const VERSAO = '1.17.7';
+    const VERSAO = '1.17.8';
     const CHAVE = 'DealerTema.config';
     const PREFIXO = 'dealer-tema';
+
+    // Palmeiras em silhueta (fundo do esquema 'vice'): duas palmeiras desenhadas aqui, sem imagem externa e sem contorno
+    // (só preenchimento, pouco mais clara que o fundo). Cada folha é uma curva com folíolos dos dois lados, caindo com a gravidade.
+    function palmeirasSvg(cor, espelhar) {
+      const f1 = n => n.toFixed(1);
+      const palmeira = (x, base, alt, incl, esc) => {
+        const tx = x + incl, ty = base - alt, w0 = 7 * esc, w1 = 3.2 * esc;
+        let d = `M${f1(x - w0)} ${base}C${f1(x - w0 + incl * .2)} ${f1(base - alt * .45)} ${f1(tx - w1 - incl * .15)} ${f1(ty + alt * .3)} ${f1(tx - w1)} ${f1(ty)}`
+          + `L${f1(tx + w1)} ${f1(ty)}C${f1(tx + w1 - incl * .1)} ${f1(ty + alt * .3)} ${f1(x + w0 + incl * .25)} ${f1(base - alt * .45)} ${f1(x + w0)} ${base}Z`;
+        let raque = '';
+        // folhas: ângulo de saída, comprimento, caimento da ponta
+        const folhas = [[-176, 175, 120], [-158, 165, 70], [-132, 135, 30], [-100, 95, 15], [-70, 115, 25], [-42, 150, 50], [-18, 170, 95], [-2, 160, 135],
+          [165, 140, 150], [20, 135, 155], [125, 90, 120], [60, 95, 115]];
+        for (const [ang, comp, cai] of folhas) {
+          const a = ang * Math.PI / 180, L = comp * esc, C = cai * esc;
+          const p0 = [tx, ty], p2 = [tx + Math.cos(a) * L, ty + Math.sin(a) * L + C];
+          const p1 = [tx + Math.cos(a) * L * .55, ty + Math.sin(a) * L * .55 - 38 * esc];
+          const B = t => [(1 - t) ** 2 * p0[0] + 2 * (1 - t) * t * p1[0] + t * t * p2[0], (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * p1[1] + t * t * p2[1]];
+          raque += `M${f1(p0[0])} ${f1(p0[1])}Q${f1(p1[0])} ${f1(p1[1])} ${f1(p2[0])} ${f1(p2[1])}`;
+          const n = 22;
+          for (let i = 1; i <= n; i++) {
+            const t = i / (n + 1), [px, py] = B(t), [qx, qy] = B(Math.min(1, t + .045));
+            let dx = qx - px, dy = qy - py; const m = Math.hypot(dx, dy) || 1; dx /= m; dy /= m;
+            const len = (58 - 40 * t) * esc * (0.85 + 0.15 * Math.sin(i * 2.3));
+            for (const lado of [1, -1]) {
+              // folíolo: aponta para fora e para trás/baixo (gravidade)
+              let ox = -dy * lado, oy = dx * lado;
+              let vx = ox * .55 + dx * .5, vy = oy * .55 + dy * .5 + .75; const vm = Math.hypot(vx, vy); vx /= vm; vy /= vm;
+              const ex = px + vx * len, ey = py + vy * len;
+              d += `M${f1(px - dx * 3 * esc)} ${f1(py - dy * 3 * esc)}Q${f1((px + ex) / 2 + ox * 3 * esc)} ${f1((py + ey) / 2 + oy * 3 * esc)} ${f1(ex)} ${f1(ey)}L${f1(px + dx * 4.5 * esc)} ${f1(py + dy * 4.5 * esc)}Z`;
+            }
+          }
+        }
+        const cocos = `<circle cx="${f1(tx - 4 * esc)}" cy="${f1(ty + 6 * esc)}" r="${f1(4 * esc)}"/><circle cx="${f1(tx + 4 * esc)}" cy="${f1(ty + 7 * esc)}" r="${f1(4 * esc)}"/><circle cx="${f1(tx)}" cy="${f1(ty + 10 * esc)}" r="${f1(3.5 * esc)}"/>`;
+        return `<path d="${d}"/><path d="${raque}" fill="none" stroke="${cor}" stroke-width="${f1(2.4 * esc)}" stroke-linecap="round"/>${cocos}`;
+      };
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 560"><g fill="${cor}"` + (espelhar ? ' transform="translate(560 0) scale(-1 1)"' : '') + '>'
+        + palmeira(120, 560, 440, 60, 1.15) + palmeira(330, 560, 300, -40, .85) + '</g></svg>';
+      return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+    }
 
     // ------------------------------------------------------------------------------------------------
     // Esquemas de cores. Rampa: fundo -> superficie -> elevado -> borda -> apagado -> texto.
@@ -153,6 +193,55 @@ function dealerTema(window, document) {
         'kanagawa': { nome: 'Kanagawa', escuro: true,
             fundo: '#1f1f28', superficie: '#2a2a37', elevado: '#363646', borda: '#54546d', apagado: '#8a8980', texto: '#dcd7ba',
             vermelho: '#e46876', laranja: '#ffa066', amarelo: '#e6c384', verde: '#98bb6c', ciano: '#7aa89f', azul: '#7e9cd8', magenta: '#957fb8' },
+        // ---- especiais ----
+        // GTA VI (id 'vice'): pôr do sol neon da Flórida dos anos 80/2020 (inspirado no visual de GTA VI). Escuro, com o rosa-choque como
+        // destaque (o papel "azul" é a cor de destaque do motor), laranja de pôr do sol e turquesa de Miami. O `extra`
+        // acrescenta CSS que só um esquema assim usa: degradês de pôr do sol nos títulos e brilho neon.
+        'vice': { nome: 'GTA VI', escuro: true,
+            fundo: '#1a0f2e', superficie: '#22143d', elevado: '#2d1a4f', borda: '#4b2d7a', apagado: '#a48cce', texto: '#fff0fa',
+            vermelho: '#ff4d6d', laranja: '#ff8c42', amarelo: '#ffd23f', verde: '#46f2a6', ciano: '#2de2e6', azul: '#ff3ea5', magenta: '#b967ff',
+            extra: (P, c, x) => `
+html{background-image:${palmeirasSvg('#36195e', false)},${palmeirasSvg('#2c1550', true)},
+  radial-gradient(120% 60% at 50% 115%,rgba(255,120,70,.2),transparent 60%),radial-gradient(80% 50% at 100% 0%,rgba(185,103,255,.10),transparent 60%)!important;
+  background-repeat:no-repeat!important;background-position:left -40px bottom,right -40px bottom,0 0,0 0!important;
+  background-size:auto min(80vh,640px),auto min(62vh,500px),100% 100%,100% 100%!important;background-attachment:fixed!important}
+body{background-color:transparent!important}
+::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#ff3ea5,#ff8c42)!important;border:2px solid ${c(P.fundo)}}
+/* títulos de janela: céu de pôr do sol (roxo -> rosa -> laranja) com letreiro neon */
+.x-window-tl{background-image:linear-gradient(90deg,#3a1760 0%,#8a2470 55%,#ff6a3d 100%)!important;border-bottom:0!important;box-shadow:0 2px 0 0 rgba(255,62,165,.55),0 4px 14px -4px rgba(255,62,165,.5)}
+.x-window-tl .x-window-header,.x-window-header-text{color:#fff!important;text-shadow:0 0 6px rgba(255,62,165,.9),0 0 1px #fff}
+.x-window{box-shadow:0 0 0 1px #ff3ea566,0 10px 40px -8px rgba(255,62,165,.35)!important}
+/* barra de cima do portal e barras de ferramentas: faixa neon embaixo */
+.x-toolbar{box-shadow:inset 0 -2px 0 0 transparent;border-image:linear-gradient(90deg,#2de2e6,#ff3ea5,#ff8c42) 0 0 1 0!important;border-bottom-width:1px!important;border-bottom-style:solid!important}
+/* grades: cabeçalho com sublinhado rosa -> laranja e linha em foco com brilho */
+table.WorkWith>*>tr>th,table.Grid>*>tr>th,th.WorkWithTitle,th.GridTitle{box-shadow:inset 0 -2px 0 0 #ff3ea5}
+table.WorkWith,table.Grid{box-shadow:0 0 0 1px rgba(255,62,165,.12),0 8px 24px -12px rgba(255,62,165,.35)}
+table.WorkWith>*>tr:hover>td,table.Grid>*>tr:hover>td{text-shadow:0 0 8px rgba(255,62,165,.35)}
+/* botões (texto do tema, ícone em caixa, redondos do GeneXus, rodapé das janelas Ext): vidro roxo com borda neon
+   rosa -> laranja; no hover acende. Só o fundo/borda: os ícones ficam com as cores deles */
+.dt-texto,.dt-icone.dt-caixa,span.BaseRBtn input.BtnText,.x-panel-btns table.x-btn{border:1px solid transparent!important;
+  background:linear-gradient(180deg,#3b1d63,#26133f) padding-box,linear-gradient(100deg,#ff3ea5,#ff8c42) border-box!important;
+  box-shadow:0 0 10px -5px rgba(255,62,165,.7)!important}
+.dt-texto:hover,.dt-icone.dt-caixa:hover,span.BaseRBtn input.BtnText:hover:not(:disabled),.x-panel-btns table.x-btn-over{
+  background:linear-gradient(180deg,#5b2486,#3a1659) padding-box,linear-gradient(100deg,#ff6cbd,#ffad66) border-box!important;
+  box-shadow:0 0 14px -3px rgba(255,62,165,.85),0 0 22px -8px rgba(255,140,66,.7)!important}
+.dt-texto:active,.dt-icone.dt-caixa:active{transform:translateY(1px)}
+/* botões Bootstrap da tela inicial (WP_Fluxo): o <span class="btn"> é só um invólucro inline, o botão visível é o <a>.
+   Abas (btn-default) no mesmo vidro neon; ações (btn-primary: Executar, Delegar, Atualizar) cheias com o pôr do sol */
+.btn.btn-default>a{border:1px solid transparent!important;border-radius:6px;background:linear-gradient(180deg,#3b1d63,#26133f) padding-box,linear-gradient(100deg,#ff3ea5,#ff8c42) border-box!important;
+  box-shadow:0 0 10px -5px rgba(255,62,165,.7)!important;color:#fff0fa!important}
+.btn.btn-default>a:hover{background:linear-gradient(180deg,#5b2486,#3a1659) padding-box,linear-gradient(100deg,#ff6cbd,#ffad66) border-box!important;
+  box-shadow:0 0 14px -3px rgba(255,62,165,.85)!important;text-decoration:none}
+.btn.btn-primary>a{border:1px solid rgba(255,255,255,.14)!important;border-radius:6px;background:linear-gradient(100deg,#ff3ea5 0%,#ff5f7e 50%,#ff8c42 100%)!important;
+  box-shadow:0 4px 16px -4px rgba(255,62,165,.75)!important;color:#fff!important;text-shadow:0 1px 2px rgba(80,0,40,.45)}
+.btn.btn-primary>a :is(i,span){color:#fff!important}
+.btn.btn-primary>a:hover{filter:brightness(1.1) saturate(1.1);box-shadow:0 6px 22px -4px rgba(255,120,80,.9)!important;text-decoration:none}
+/* listas FreeStyle (ex. fluxos da tela inicial): linhas sem fundo próprio, para as palmeiras não virarem faixas */
+tr:is(.FreeStyleGridOdd,.FreeStyleGridEven){background-color:transparent!important}
+/* títulos e destaques em neon */
+legend.ContornoTitle,.Title,.TextBlockHeader,#span_vGRUPOEMPRESA_NOME{color:#ffd1ec!important;text-shadow:0 0 8px rgba(255,62,165,.7)}
+a:hover{text-shadow:0 0 6px rgba(45,226,230,.7)}
+` },
         // ---- claros ----
         'github-light': { nome: 'GitHub Light', escuro: false,
             fundo: '#ffffff', superficie: '#f6f8fa', elevado: '#eaeef2', borda: '#d0d7de', apagado: '#656d76', texto: '#1f2328',
@@ -2185,6 +2274,7 @@ ${e.escuro && !trocarImagens ? '.x-menu-item-checked .x-menu-item-icon,.x-menu-g
 `;
         s += cssComponentes(e, P);
         if (trocarImagens) s += cssImagens(e, P, ext);
+        if (typeof e.extra === 'function') s += e.extra(P, c, x);   // CSS próprio de um esquema (ex. 'vice')
         return s;
     }
 
@@ -3039,7 +3129,7 @@ dealerTema(window, document);
     window.__dealerFluxoCarregado = true;
 
     const NOME_EXIBICAO = 'Dealer/Fluxo';
-    const VERSAO_FLUXO = '1.2.1';                // igual ao @version do cabeçalho (o build confere)
+    const VERSAO_FLUXO = '1.3.0';                // igual ao @version do cabeçalho (o build confere)
     const CONTATO = 'igor.lima@grupogr7.com.br';
     const NOME_SCRIPT = 'Dealer/Fluxo';
     const CHAVE_CONFIG = 'DealerBarraDeTarefas.config';
@@ -3521,6 +3611,171 @@ dealerTema(window, document);
             .dbtPreviaBarra button { font-family: arial, tahoma, verdana, helvetica; }`;
     }
 
+    // ---------------------------------------------------------------------------------------------
+    // Esquema "GTA VI" do Dealer/Tema (id 'vice'; céu de pôr do sol + neon): a barra, os menus, as janelas de configurações e
+    // os avisos ganham o mesmo visual que o tema dá aos botões do portal (vidro roxo com borda rosa -> laranja,
+    // destaque cheio com o pôr do sol). Tudo fica preso a html[data-dealer-tema-esquema="vice"] (o tema põe esse
+    // atributo em cada documento que ele pinta) e o <style> leva data-dealer-tema, para o tema não remapear as
+    // cores. A mesma folha entra no portal e em cada tela (iframe): cada regra só acha os elementos do seu lugar.
+    // ---------------------------------------------------------------------------------------------
+    function cssVice() {
+        const H = 'html[data-dealer-tema-esquema="vice"]';
+        // Os :not(#...) só aumentam a especificidade, para ganhar de todas as combinações de aparência dos botões
+        const V = `${H} :is(#barraDeTarefas, .dbtPreviaBarra):not(#dbtVice1):not(#dbtVice2)`;
+        const borda = 'linear-gradient(100deg,#ff3ea5,#ff8c42) border-box';
+        const vidro = `linear-gradient(180deg,#3b1d63,#26133f) padding-box, ${borda}`;
+        const vidroAceso = 'linear-gradient(180deg,#5b2486,#3a1659) padding-box, linear-gradient(100deg,#ff6cbd,#ffad66) border-box';
+        const porDoSol = 'linear-gradient(100deg,#ff3ea5 0%,#ff5f7e 50%,#ff8c42 100%)';
+        const brilho = '0 0 10px -5px rgba(255,62,165,.7)';
+        const brilhoAceso = '0 0 14px -3px rgba(255,62,165,.85), 0 0 22px -8px rgba(255,140,66,.7)';
+        const brilhoDestaque = '0 4px 16px -4px rgba(255,62,165,.75)';
+        const textoDestaque = '0 1px 2px rgba(80,0,40,.45)';
+        const reflexo = 'linear-gradient(105deg, rgba(255,255,255,0) 40%, rgba(255,255,255,.35) 50%, rgba(255,255,255,0) 60%)';
+        const foco = '0 0 0 2px rgba(255,62,165,.3), 0 0 12px -2px rgba(255,62,165,.6)';
+        const campos = ':is(input[type=text], input[type=number], input:not([type]), select, textarea)';
+        return `
+/* ---- Barra de tarefas (e a prévia da aba Barra) ---- */
+${V} { color: #ff3ea5; }   /* contorno dos formatos recortados (currentColor) */
+${V} button { border-color: transparent; background: ${vidro}; color: #fff0fa; text-shadow: none; box-shadow: ${brilho}; }
+${V}.dbte-gradiente button { background: linear-gradient(rgba(255,255,255,.16), rgba(255,255,255,0) 55%) padding-box, ${vidro}; }
+${V}.dbte-brilhante button { background: linear-gradient(rgba(255,255,255,.24), rgba(255,255,255,.08) 48%, rgba(255,255,255,0) 52%) padding-box, ${vidro}; }
+${V}.dbte-relevo button { box-shadow: inset 0 1px 0 rgba(255,255,255,.2), inset 0 -2px 0 rgba(0,0,0,.4), ${brilho}; }
+${V}.dbte-vidro button { background: linear-gradient(180deg,rgba(91,36,134,.55),rgba(38,19,63,.55)) padding-box,
+    linear-gradient(100deg,rgba(255,62,165,.75),rgba(255,140,66,.75)) border-box; box-shadow: inset 0 1px 0 rgba(255,255,255,.15), ${brilho}; }
+${V}.dbte-contorno button { background: transparent; border-color: #ff3ea5; }
+${V}.dbte-contorno:is(.dbtf-chanfrado, .dbtf-seta, .dbtf-divisa, .dbtf-pontas, .dbtf-etiqueta, .dbtf-inclinado) button { background: #26133f; }
+${V}.dbte-plano button { background: transparent; box-shadow: none; }
+${V} button:not(.ativo):hover { background: ${vidroAceso}; color: #ffffff; box-shadow: ${brilhoAceso}; }
+${V}.dbte-contorno button:not(.ativo):hover, ${V}.dbte-plano button:not(.ativo):hover { background: rgba(255,62,165,.16); }
+${V}.dbth-sublinhar button:not(.ativo):hover { box-shadow: inset 0 -2px 0 #ff3ea5, ${brilhoAceso}; }
+${V}.dbth-reflexo button:not(.ativo):hover { background: ${reflexo} padding-box, ${vidroAceso};
+    background-size: 250% 100%, 100% 100%, 100% 100%; animation: barraTarefasReflexo .7s ease-out; }
+/* janela ativa: cheia com o pôr do sol */
+${V} button.ativo { background: ${porDoSol}; border-color: rgba(255,255,255,.14); color: #ffffff; text-shadow: ${textoDestaque}; box-shadow: ${brilhoDestaque}; }
+${V} button.ativo:hover { box-shadow: 0 6px 22px -4px rgba(255,120,80,.9); }
+${V}.dbth-reflexo button.ativo:hover { background: ${reflexo}, ${porDoSol}; background-size: 250% 100%, 100% 100%; animation: barraTarefasReflexo .7s ease-out; }
+${V}.dbte-relevo button.ativo { box-shadow: inset 0 2px 4px rgba(80,0,40,.55), ${brilhoDestaque}; }
+${V}.dbta-linha button.ativo { box-shadow: inset 0 -3px 0 #2de2e6, ${brilhoDestaque}; }
+${V}.dbta-sublinhado button.ativo { background: ${vidro}; color: #ffffff; text-shadow: none; font-weight: bold; box-shadow: inset 0 -3px 0 #ff3ea5, ${brilho}; }
+${V}.dbta-sublinhado:is(.dbte-plano, .dbte-contorno) button.ativo { background: transparent; }
+${V}.dbta-invertido button.ativo { background: #ffd1ec; border-color: #ffd1ec; color: #3a1760; text-shadow: none; }
+${V}.dbta-aceso button.ativo { box-shadow: 0 0 0 1px #ff3ea5, 0 0 10px 2px #ff3ea5, 0 0 18px 2px rgba(255,140,66,.6); text-shadow: 0 0 4px rgba(255,255,255,.9); }
+${V}.dbta-levantado button.ativo { box-shadow: 0 3px 0 #8a2470, 0 6px 14px -4px rgba(255,62,165,.7); }
+/* terminou de carregar em segundo plano: verde-neon (o ✔ e o negrito continuam, não depende só da cor) */
+${V} button.concluido { box-shadow: inset 0 -3px 0 #46f2a6, 0 0 10px -4px rgba(70,242,166,.8); }
+${V} button.concluido::before { color: #46f2a6; }
+${V}.dbtf-circulo button.concluido { box-shadow: inset 0 0 0 2px #46f2a6, 0 0 10px -4px rgba(70,242,166,.8); }
+/* doca dos formatos encaixados */
+${V}::before { background-color: #3a1760; background-image: linear-gradient(90deg, #3a1760, #8a2470 70%, #ff3ea5); }
+${H} .dbtPreviaFundo { border-color: #4b2d7a; border-radius: 6px; }
+
+/* ---- Menus (engrenagem, clique direito, sino) ---- */
+${H} .x-menu { border-color: #ff3ea5 !important; box-shadow: 0 0 0 1px rgba(255,62,165,.2), 0 12px 30px -8px rgba(255,62,165,.55); }
+${H} .x-menu-item-active { background-image: linear-gradient(100deg, rgba(255,62,165,.4), rgba(255,140,66,.28)) !important; border-color: #ff3ea5 !important; }
+${H} .x-menu-item-active .x-menu-item-text { color: #ffffff !important; text-shadow: 0 0 6px rgba(255,62,165,.9); }
+${H} .x-menu-item-icon.dbt-ico { background-color: #ff8fd0 !important; }
+${H} .x-menu-item-active .x-menu-item-icon.dbt-ico { background-color: #ffffff !important; }
+${H} .barraTarefasMenuTitulo { color: #ffd1ec; border-bottom-color: #4b2d7a; text-shadow: 0 0 8px rgba(255,62,165,.7); }
+${H} .dbtMenuGrupo { color: #2de2e6; }
+${H} .x-tool.x-tool-dbt-inicio { color: #ffd1ec; }
+${H} .x-tool.x-tool-dbt-inicio-over { color: #ffffff; text-shadow: 0 0 6px rgba(255,62,165,.9); }
+
+/* ---- Janelas de configurações e tutoriais ---- */
+${H} .barraTarefasConfig fieldset { border-color: #4b2d7a; border-radius: 8px; box-shadow: 0 6px 18px -12px rgba(255,62,165,.6); }
+${H} .barraTarefasConfig legend, ${H} .barraTarefasTutorial h3 { color: #ffd1ec; text-shadow: 0 0 8px rgba(255,62,165,.7); }
+${H} .barraTarefasConfig .dbtAbas { border-bottom: 1px solid #ff3ea5; border-image: linear-gradient(90deg, #2de2e6, #ff3ea5, #ff8c42) 0 0 1 0; }
+${H} .barraTarefasConfig .dbtAba { background: linear-gradient(180deg, #3b1d63, #26133f); border-color: #4b2d7a; color: #e9d8ff; }
+${H} .barraTarefasConfig .dbtAba:hover { background: linear-gradient(180deg, #5b2486, #3a1659); color: #ffffff; filter: none; box-shadow: 0 -2px 10px -4px rgba(255,62,165,.7); }
+${H} .barraTarefasConfig .dbtAba.ativa { background: ${porDoSol}; border-color: #ff3ea5; color: #ffffff; text-shadow: ${textoDestaque};
+    box-shadow: 0 -2px 14px -4px rgba(255,62,165,.85); }
+${H} .barraTarefasConfig .dbtAbaIco { background-color: #ff8fd0; }
+${H} .barraTarefasConfig .dbtAba.ativa .dbtAbaIco { background-color: #ffffff; }
+${H} .barraTarefasConfig.dbtBuscando .dbtAbas .dbtAba.ativa { background: linear-gradient(180deg, #3b1d63, #26133f); border-color: #4b2d7a;
+    color: #e9d8ff; text-shadow: none; box-shadow: none; }
+${H} .barraTarefasConfig.dbtBuscando .dbtAbas .dbtAba.ativa .dbtAbaIco { background-color: #ff8fd0; }
+${H} .barraTarefasConfig.dbtBuscando .dbtAbaPainel::before { color: #ffd1ec; border-bottom-color: #ff3ea5; text-shadow: 0 0 8px rgba(255,62,165,.6); }
+${H} ::highlight(dbt-busca-config) { background-color: #ffd23f; color: #1a0f2e; }
+${H} .barraTarefasConfig .dbtBotao { border-color: transparent; border-radius: 6px; background: ${vidro}; color: #fff0fa; box-shadow: ${brilho}; }
+${H} .barraTarefasConfig .dbtBotao:hover { background: ${vidroAceso}; color: #ffffff; box-shadow: ${brilhoAceso}; }
+${H} .barraTarefasConfig ${campos}, ${H} .barraTarefasConfig input.dbtAtalho {
+    background-color: #1a0f2e; border: 1px solid #4b2d7a; border-radius: 4px; color: #fff0fa; }
+${H} .barraTarefasConfig ${campos}:focus { outline: none; border-color: #ff3ea5; box-shadow: ${foco}; }
+${H} .barraTarefasConfig input.dbtCampoBuscaConfig { border-radius: 6px; }
+${H} .barraTarefasConfig input.dbtAtalho.gravando { background-color: rgba(255,210,63,.14); border-color: #ffd23f; box-shadow: 0 0 10px -3px rgba(255,210,63,.8); }
+${H} .barraTarefasConfig .dbtLimpar:hover { color: #ff4d6d; }
+${H} :is(.barraTarefasConfig, .barraTarefasTutorial) { accent-color: #ff3ea5; }
+${H} .barraTarefasConfig .dbtListaFluxos { background-color: #1a0f2e; border-color: #4b2d7a; border-radius: 6px; }
+${H} .barraTarefasConfig .dbtListaFluxos label:hover { background: rgba(255,62,165,.16); }
+${H} .barraTarefasConfig .dbtSobreNome { background: ${porDoSol}; -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 6px rgba(255,62,165,.55)); }
+${H} .barraTarefasConfig .dbtAvisoAlfa { background: rgba(255,140,66,.12); border-left-color: #ff8c42; color: #ffd9bd; }
+${H} .barraTarefasConfig :is(.dbtAvisoDepuracao, .dbtAvisoVolume) { background: rgba(255,77,109,.12); border-left-color: #ff4d6d; color: #ffc2cf; }
+${H} .barraTarefasTutorial .dbtAviso { background: rgba(255,210,63,.1); border-color: #ffd23f; border-radius: 6px; color: #fff0fa; }
+${H} .barraTarefasTutorial kbd { background: #2d1a4f; border-color: #ff3ea5 #ff3ea5 #ff8c42; color: #fff0fa; box-shadow: 0 0 6px -2px rgba(255,62,165,.7); }
+${H} .barraTarefasTutorial i.fa { color: #ff6cbd; }
+/* botões do rodapé (Salvar, Cancelar...) e das caixas de mensagem; o principal (Salvar) cheio com o pôr do sol */
+${H} :is(.barraTarefasJanela, .x-window-dlg) .x-panel-fbar .x-btn { border: 1px solid transparent !important; border-radius: 6px;
+    background: ${vidro} !important; box-shadow: ${brilho}; }
+${H} :is(.barraTarefasJanela, .x-window-dlg) .x-panel-fbar .x-btn button { color: #fff0fa !important; }
+${H} :is(.barraTarefasJanela, .x-window-dlg) .x-panel-fbar .x-btn-over { background: ${vidroAceso} !important; box-shadow: ${brilhoAceso}; }
+${H} :is(.barraTarefasJanela, .x-window-dlg) .x-panel-fbar .x-btn-click { transform: translateY(1px); }
+${H} :is(.barraTarefasJanela, .x-window-dlg) .x-panel-fbar .x-btn-focus { box-shadow: 0 0 0 2px rgba(45,226,230,.6), ${brilho}; }
+${H} .barraTarefasJanela .x-panel-fbar .x-btn.dbtPrimario { background: ${porDoSol} !important; border-color: rgba(255,255,255,.14) !important; box-shadow: ${brilhoDestaque}; }
+${H} .barraTarefasJanela .x-panel-fbar .x-btn.dbtPrimario button { color: #ffffff !important; font-weight: bold; text-shadow: ${textoDestaque}; }
+${H} .barraTarefasJanela .x-panel-fbar .x-btn.dbtPrimario.x-btn-over { filter: brightness(1.1) saturate(1.1); box-shadow: 0 6px 22px -4px rgba(255,120,80,.9); }
+
+/* ---- Aviso de novos fluxos ---- */
+${H} .barraTarefasNotificacao { border: 1px solid transparent; border-left-width: 5px; border-right: none; border-radius: 8px 0 0 8px; color: #fff0fa;
+    background: linear-gradient(180deg, #2d1a4f, #22143d) padding-box, linear-gradient(180deg, #ff3ea5, #ff8c42) border-box;
+    box-shadow: 0 0 0 1px rgba(255,62,165,.2), 0 12px 32px -8px rgba(255,62,165,.6); }
+${H} .barraTarefasNotificacao strong { color: #ffd1ec; text-shadow: 0 0 8px rgba(255,62,165,.75); }
+${H} .barraTarefasNotificacao .dbtTempo, ${H} .barraTarefasNotificacao .dbtFechar { color: #a48cce; }
+${H} .barraTarefasNotificacao .dbtFechar:hover { color: #ffffff; background: #ff4d6d; }
+${H} .barraTarefasNotificacao .dbtLinhaFluxo:hover { color: #2de2e6; text-shadow: 0 0 6px rgba(45,226,230,.7); }
+${H} .barraTarefasNotificacao .dbtAcoes a { color: #2de2e6; }
+
+/* ---- Avisos das telas (dentro de cada tela) ---- */
+${H} span.ErrorViewer>div { background-color: rgba(255,77,109,.14); border-left-color: #ff4d6d; color: #fff0fa !important; }
+${H} #dnf-aviso { border: 1px solid transparent; border-left-width: 4px; color: #fff0fa;
+    background: linear-gradient(180deg, #2d1a4f, #22143d) padding-box, linear-gradient(160deg, #ff4d6d, #ff3ea5 55%, #ff8c42) border-box;
+    box-shadow: 0 0 0 1px rgba(255,77,109,.25), 0 16px 48px -10px rgba(255,62,165,.65); }
+${H} #dnf-aviso svg, ${H} #dnf-aviso-pilula svg { color: #ff4d6d; filter: drop-shadow(0 0 4px rgba(255,77,109,.8)); }
+${H} #dnf-aviso .dnf-acoes { border-left-color: #4b2d7a; }
+${H} #dnf-aviso .dnf-acoes button { border-color: transparent; border-radius: 6px; background: ${vidro}; color: #fff0fa; box-shadow: ${brilho}; }
+${H} #dnf-aviso .dnf-acoes button:hover { background: ${vidroAceso}; color: #ffffff; box-shadow: ${brilhoAceso}; }
+${H} #dnf-aviso-pilula { border-color: transparent; color: #fff0fa;
+    background: linear-gradient(180deg, #3a1760, #26133f) padding-box, linear-gradient(100deg, #ff4d6d, #ff8c42) border-box;
+    box-shadow: 0 0 12px -3px rgba(255,77,109,.8); }
+
+/* ---- Busca nas listas de opções (dentro de cada tela) ---- */
+${H} #dnf-busca { background-color: #22143d; border-color: #ff3ea5; border-radius: 8px; color: #fff0fa;
+    box-shadow: 0 0 0 1px rgba(255,62,165,.25), 0 12px 32px -8px rgba(255,62,165,.6); }
+${H} #dnf-busca input { background-color: #1a0f2e; border-color: #4b2d7a; border-radius: 6px; color: #fff0fa; }
+${H} #dnf-busca input:focus { border-color: #ff3ea5; box-shadow: ${foco}; }
+${H} #dnf-busca li.dnf-desativada { color: #6e5a96; }
+${H} #dnf-busca li.dnf-vazio { color: #a48cce; }
+${H} #dnf-busca li.dnf-marcada { background: ${porDoSol}; color: #ffffff; text-shadow: ${textoDestaque}; }
+${H} #dnf-busca mark { background-color: #ffd23f; color: #1a0f2e; }
+${H} #dnf-busca li.dnf-marcada mark { background-color: rgba(255,255,255,.3); color: #ffffff; }
+${H} #dnf-busca .dnf-barra-busca { background: linear-gradient(90deg, rgba(45,226,230,.12), rgba(255,62,165,.12)); color: #2de2e6; border-bottom-color: #4b2d7a; }
+${H} #dnf-busca .dnf-barra-busca:hover { background: linear-gradient(90deg, rgba(45,226,230,.22), rgba(255,62,165,.22)); }
+${H} #dnf-busca .dnf-barra-busca kbd { background-color: #1a0f2e; border-color: #4b2d7a; color: #a48cce; }
+${H} #dnf-busca .dnf-rodape { background-color: #1a0f2e; border-top-color: #4b2d7a; color: #a48cce; }
+${H} #dnf-lupa { background: ${porDoSol}; border-left-color: rgba(255,255,255,.2); color: #ffffff; box-shadow: 0 0 10px -2px rgba(255,62,165,.85); }
+${H} #dnf-lupa:hover { background: ${porDoSol}; filter: brightness(1.12) saturate(1.1); }
+`;
+    }
+
+    // Põe a folha do esquema "GTA VI" num documento (o portal ou uma tela), uma vez só
+    function estiloVice(doc) {
+        if (!doc || doc.getElementById('dbt-vice-css')) return;
+        const el = doc.createElement('style');
+        el.id = 'dbt-vice-css';
+        el.setAttribute('data-dealer-tema', '');   // marcado antes de entrar: o tema não traduz estas cores
+        el.textContent = cssVice();
+        (doc.head || doc.documentElement).appendChild(el);
+    }
+
     function gerarEstilos(tema) {
         const altura = config.alturaBarra;
         const icones = Object.keys(ICONES).map(nome =>
@@ -3787,6 +4042,7 @@ dealerTema(window, document);
             document.head.appendChild(elementoEstilo);
         }
         elementoEstilo.textContent = gerarEstilos(temaAtual);
+        estiloVice(document);
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -4048,6 +4304,9 @@ dealerTema(window, document);
         doc.__barraTarefas = true;
         win.__barraTarefasJanela = idJanela;
         win.__barraTarefasPendentes = 0;
+
+        // Visual do esquema "GTA VI" do Dealer/Tema para os avisos e a busca nas listas desta tela
+        estiloVice(doc);
 
         // Avisos do GeneXus (mensagens em vermelho no topo da tela) em destaque
         instalarAvisoFlutuante(doc);
@@ -5328,6 +5587,8 @@ dealerTema(window, document);
         // O fundo da prévia imita a barra de status do portal
         try {
             const estilo = getComputedStyle(oW5Portal.statusbar.getEl().dom);
+            // Já é a cor final (com o Dealer/Tema, a cor do tema): marcado para o tema não traduzi-la de novo
+            previa.parentNode.setAttribute('data-dealer-tema', '');
             previa.parentNode.style.backgroundColor = estilo.backgroundColor;
             previa.parentNode.style.backgroundImage = estilo.backgroundImage;
         } catch (e) { /* sem barra de status: fica o fundo branco */ }
@@ -5633,6 +5894,7 @@ dealerTema(window, document);
                 },
                 {
                     text: 'Salvar',
+                    cls: 'dbtPrimario',
                     handler: () => {
                         const novo = lerFormulario(janelaConfig.body.dom);
                         novo.fluxos = lerFluxos();
