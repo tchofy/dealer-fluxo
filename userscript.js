@@ -69,10 +69,10 @@
 // "Tema Escuro"; o trecho abaixo é copiado de lá por extensao/build.py. Na extensão ele é um content script
 // próprio (dealer-tema.js) e este trecho não vai junto. As opções ficam em Configurações > Tema.
 // ==== Dealer/Tema (gerado a partir de ../Tema Escuro/dealer-tema.lib.js, não editar aqui) ====
-// Dealer/Tema 1.17.6 — biblioteca de temas de cores para o DealerNet Workflow.
+// Dealer/Tema 1.17.7 — biblioteca de temas de cores para o DealerNet Workflow.
 // Usada só embutida no Dealer/Fluxo (não é um userscript instalável sozinho). Fonte única: este arquivo,
 // copiado sem alterações para dentro do Dealer/Fluxo pelo build dele. Como integrar e a API
-// (window.DealerTema): INTEGRACAO-DEALER-FLUXO.md. Precisa rodar em document-start no Portal/default.html e no LoginAux.aspx (tela de login).
+// (window.DealerTema): INTEGRACAO-DEALER-FLUXO.md. Precisa rodar em document-start no Portal/default.html, no LoginAux.aspx (tela de login) e no wp_esqueciminhasenha.aspx.
 
 /*
  * Como funciona
@@ -108,7 +108,7 @@ function dealerTema(window, document) {
     if (document.__dealerTema || window.location.protocol === 'about:') return;
     document.__dealerTema = true;
 
-    const VERSAO = '1.17.6';
+    const VERSAO = '1.17.7';
     const CHAVE = 'DealerTema.config';
     const PREFIXO = 'dealer-tema';
 
@@ -443,6 +443,8 @@ function dealerTema(window, document) {
         ultima: '<path d="M18 5v14M6 6l7 6-7 6"/>',
         baixo: '<path d="M6 9l6 6 6-6"/>',
         check: '<path d="M5 12.5l4.5 4.5L19 7"/>',
+        // marcado/desmarcado do Grupo de Acesso: traço grosso para o verde e o vermelho se distinguirem (daltonismo)
+        checkGrosso: '<path d="M4.5 12.5l5 5L19.5 6.5" stroke-width="4.2"/>',
         caixa: '<rect x="4" y="4" width="16" height="16" rx="3"/>',
         caixaCheck: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12.5l3 3 5-6"/>',
         ponto: '<circle cx="12" cy="12" r="7.5" fill="currentColor"/>',
@@ -544,6 +546,7 @@ function dealerTema(window, document) {
         volante: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M3.5 11c3-1 5.5-1.5 8.5-1.5s5.5.5 8.5 1.5M10.5 13.5L8 20.5M13.5 13.5l2.5 7"/>',
         alvo: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/>',
         pasta: '<path d="M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/>',
+        pastaAberta: '<path d="M3 18V6a1 1 0 0 1 1-1h5l2 2h7a1 1 0 0 1 1 1v2"/><path d="M3 18l2.6-7.3a1 1 0 0 1 .9-.7H21a.8.8 0 0 1 .8 1L19.4 18.3a1 1 0 0 1-.9.7H4a1 1 0 0 1-1-1z"/>',
         aperto: '<path d="M2 12l3-6 3 1 3-2 3 1M22 12l-3-6-3.5 1.2"/><path d="M5 6l-3 6 2 2M19 6l3 6-3.5 3"/><path d="M11 5L7.5 9a1.3 1.3 0 0 0 1.8 1.9L12 8.5l5.5 5.5a1.3 1.3 0 0 1-1.8 1.9l-1.5-1.5 1 1a1.3 1.3 0 0 1-1.8 1.9l-1-1 .5.5a1.3 1.3 0 0 1-1.8 1.9L8 15.5 4 14"/>',
         monitor: '<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/>',
         setaCima: '<circle cx="12" cy="12" r="9"/><path d="M12 16.5v-9M8 11l4-4 4 4"/>',
@@ -662,6 +665,9 @@ function dealerTema(window, document) {
         actioninsert: ['Adicionar', 'mais', 'verde'],
         btnfechar: ['Fechar', 'fechar', 'vermelho'],
         btnconfirmar: ['Confirmar', 'check', 'verde'],
+        btnmenu: ['Acesso Menu', 'checklist', 'azul'],
+        btnbotao: ['Acesso Botão', 'cadeado', 'amarelo'],
+        btnusuario: ['Usuário', 'usuarios', 'azul'],
         btneliminar: ['Excluir', 'lixeira', 'vermelho'],
         btnimprimir: ['Imprimir', 'imprimir', 'ciano'],
         btnimprimirservicos_cd: ['Serviços', 'imprimir', 'ciano'],
@@ -1038,7 +1044,8 @@ function dealerTema(window, document) {
         pageprevious: ['anterior', null, { titulo: 'Página anterior' }],
         pagenext: ['proxima', null, { titulo: 'Próxima página' }],
         pagelast: ['ultima', null, { titulo: 'Última página' }],
-        selectrow: ['check', 'verde'],
+        selectrow: ['checkGrosso', 'verde'],
+        unselectrow: ['checkGrosso', 'vermelho'],
         checkboxmarcado: ['check', 'verde'],
         icoalerta: ['alerta', 'laranja'],
         icoerro: ['alerta', 'vermelho'],
@@ -2159,6 +2166,21 @@ input[type="image"][src*="/btn" i],img[src*="/btn" i],input[type="image"][src*="
 .x-grid3-row-over{background-color:${x('fundo', 'azul', .15)}}
 .x-tip,.x-tip .x-tip-body{background-color:${c(P.elevado)};color:${c(P.texto)}}
 .x-shadow *{opacity:.5}
+/* caixas de mensagem do ExtJS (Ext.Msg: aviso de fim de sessão, confirmações): cartão inteiro arredondado, corpo sem
+   faixa própria e botões do rodapé com cara de botão (no tema eles viravam só texto) */
+.x-window-dlg{border-radius:8px;box-shadow:0 0 0 1px ${c(P.borda)},0 12px 32px rgba(0,0,0,${e.escuro ? .45 : .18})}
+.x-window-dlg .x-window-bl{border-radius:0 0 8px 8px}
+.x-window-dlg .x-window-mc{border:0!important;background:${c(P.elevado)}!important}
+.x-window-dlg .x-window-body{background:transparent!important;padding:14px 16px 8px!important;box-sizing:border-box}
+.x-window-dlg .ext-mb-text{color:${c(P.texto)}!important;font-size:13px;line-height:1.45}
+.x-window-dlg .x-window-footer{padding:6px 0 10px}
+.x-window-dlg~.x-shadow,.x-window-dlg+.x-shadow{display:none!important}
+.x-panel-btns table.x-btn{border-collapse:separate;border-radius:5px;background-color:${c(P.superficie)};box-shadow:inset 0 0 0 1px ${c(P.borda)};transition:background-color .15s,box-shadow .15s}
+.x-panel-btns table.x-btn td{background:transparent!important;background-image:none!important}
+.x-panel-btns table.x-btn button.x-btn-text{color:${c(P.texto)}!important;font-weight:600;height:24px}
+.x-panel-btns table.x-btn-over{background-color:${x('superficie', 'azul', e.escuro ? .18 : .1)};box-shadow:inset 0 0 0 1px ${x('borda', 'azul', .55)}}
+.x-panel-btns table.x-btn-focus{box-shadow:inset 0 0 0 1px ${c(P.azul)},0 0 0 2px ${x('fundo', 'azul', .35)}}
+.x-panel-btns table.x-btn-click{background-color:${x('superficie', 'azul', .3)}}
 ${e.escuro && !trocarImagens ? '.x-menu-item-checked .x-menu-item-icon,.x-menu-group-item .x-menu-item-icon,.x-tool,.x-tbar-loading,.x-tbar-page-first,.x-tbar-page-prev,.x-tbar-page-next,.x-tbar-page-last{filter:invert(.85) hue-rotate(180deg)}' : ''}
 `;
         s += cssComponentes(e, P);
@@ -2170,6 +2192,7 @@ ${e.escuro && !trocarImagens ? '.x-menu-item-checked .x-menu-item-icon,.x-menu-g
     function cssComponentes(e, P) {
         const c = corCss;
         const x = (a, b, t) => c(misturar(P[a], P[b], t));
+        const linhaArv = x('borda', 'texto', .25);
         const suave = c(misturar(P.apagado, P.texto, e.escuro ? 0.45 : 0.55));
         const sombra = e.escuro ? 'rgba(0,0,0,.45)' : 'rgba(0,0,0,.18)';
         return `
@@ -2295,6 +2318,72 @@ td[bgcolor]:has(span[id*="CTLPAGINACAO" i], input[id^="IMGPAGE" i]) :is(span,fon
 td[bgcolor]:has(span[id*="CTLPAGINACAO" i], input[id^="IMGPAGE" i]) span[id*="CTLPAGINACAO" i]{font-weight:600}
 td[bgcolor]:has(span[id*="CTLPAGINACAO" i], input[id^="IMGPAGE" i]) .dt-icone{color:${c(P.texto)}}
 table.WorkWith>*>tr[class$="Selection"],table.Grid>*>tr[class$="Selection"]{background-color:${x('fundo', 'azul', e.escuro ? .24 : .14)}}
+/* tela de login (LoginAux.aspx): a caixa #TABLELOGIN (border=1, fundo cinza inline) vira um cartão como as grades:
+   cabeçalho com o nome da empresa e o logo, corpo com os campos e rodapé com a versão */
+#TABLELOGIN{border-collapse:separate!important;border-spacing:0!important;border:1px solid ${c(P.borda)}!important;border-radius:8px;
+  clip-path:inset(0 round 8px);background:${c(P.fundo)}!important;min-width:420px}
+#TABLELOGIN>*>tr>td{border:0!important;padding:0!important}
+#TABLELOGIN>*>tr:first-child>td{background:${c(P.elevado)}!important;border-bottom:1px solid ${c(P.borda)}!important}
+#TABLELOGIN>*>tr:last-child>td{background:${c(P.elevado)}!important;border-top:1px solid ${c(P.borda)}!important}
+#TABLEEMPRESA2 td{vertical-align:middle!important;padding:2px 6px!important}
+/* nome da empresa: maior e na fonte escolhida (herda do td, que recebe a fonte do usuário; o id vence a fonte fixa do site) */
+#span_vGRUPOEMPRESA_NOME{color:${c(P.texto)}!important;font-family:inherit!important;font-style:normal!important;font-weight:700!important;font-size:22px!important;line-height:1.2;letter-spacing:.01em}
+#TABLEUSUARIO{background:transparent!important;padding:8px 6px 4px}
+#TABLEUSUARIO td.DataDescriptionCell,#TABLEUSUARIO td.DataContentCell{vertical-align:middle!important}
+#TABLEUSUARIO td.DataDescriptionCell{background:transparent!important;text-align:right;padding:4px 8px 4px 12px!important}
+#TABLEUSUARIO td.DataDescriptionCell span{color:${c(P.apagado)}!important;font-family:inherit!important;font-size:12px!important;font-weight:600!important}
+#TABLEUSUARIO td.DataContentCell{background:transparent!important;padding:4px 6px!important}
+#TABLEUSUARIO input.Attribute{height:26px;box-sizing:border-box;border-radius:5px;padding:0 8px}
+#TABLE2{margin-top:6px}
+#TBLVERSAO td{padding:3px 4px!important}
+#TBLVERSAO span{color:${c(P.apagado)}!important}
+/* "Esqueci minha Senha" (wp_esqueciminhasenha.aspx, aberta pelo link da tela de login): #TABLEMAIN vira um cartão como o
+   do login, com título/explicação no cabeçalho, usuário e captcha no corpo e Confirmar/Fechar no rodapé */
+form[action^="wp_esqueciminhasenha" i] #TABLEMAIN{border-collapse:separate!important;border-spacing:0!important;border:1px solid ${c(P.borda)}!important;
+  border-radius:8px;clip-path:inset(0 round 8px);background:${c(P.fundo)}!important;min-width:460px}
+form[action^="wp_esqueciminhasenha" i] #TABLEMAIN>*>tr>td{padding:0 14px!important;height:auto!important}
+form[action^="wp_esqueciminhasenha" i] #TABLEMAIN>*>tr:has(#gxErrorViewer:empty),
+form[action^="wp_esqueciminhasenha" i] #TABLEMAIN>*>tr:has(>td:empty){display:none}
+form[action^="wp_esqueciminhasenha" i] #TABLEMAIN>*>tr:has(#TEXTBLOCK2,#TEXTBLOCK1,#TEXTBLOCK3)>td{background:${c(P.elevado)}!important}
+form[action^="wp_esqueciminhasenha" i] #TABLEMAIN>*>tr:has(#TEXTBLOCK2)>td{padding-top:12px!important}
+form[action^="wp_esqueciminhasenha" i] #TABLEMAIN>*>tr:has(#TEXTBLOCK3)>td{padding-bottom:12px!important;border-bottom:1px solid ${c(P.borda)}!important;text-align:center}
+form[action^="wp_esqueciminhasenha" i] #TABLEMAIN>*>tr:has(#TABLE2)>td{padding:14px!important}
+form[action^="wp_esqueciminhasenha" i] #TABLEMAIN>*>tr:has(#TABLEACTIONS)>td{background:${c(P.elevado)}!important;border-top:1px solid ${c(P.borda)}!important;padding:6px 10px!important}
+form[action^="wp_esqueciminhasenha" i] #TEXTBLOCK2{color:${c(P.texto)}!important;font-family:inherit!important;font-style:normal!important;font-weight:700!important;font-size:20px!important}
+form[action^="wp_esqueciminhasenha" i] #TEXTBLOCK1{color:${c(P.azul)}!important;font-family:inherit!important;font-size:13px!important;font-weight:600!important}
+form[action^="wp_esqueciminhasenha" i] #TEXTBLOCK3{color:${c(P.apagado)}!important;font-family:inherit!important}
+form[action^="wp_esqueciminhasenha" i] #TABLE2{background:transparent!important;width:100%;border-collapse:separate!important;border:1px solid ${c(P.borda)}!important;border-radius:6px;clip-path:inset(0 round 6px);padding:4px}
+form[action^="wp_esqueciminhasenha" i] #TABLE2 td.DataDescriptionCell:has(+td #captchaImage){vertical-align:bottom!important;padding-bottom:10px!important}
+form[action^="wp_esqueciminhasenha" i] #TABLE2 td{background:transparent!important;vertical-align:middle!important;padding:4px 6px!important}
+form[action^="wp_esqueciminhasenha" i] #TABLE2 td.DataDescriptionCell{text-align:right;width:1%;white-space:nowrap;padding-right:10px!important}
+form[action^="wp_esqueciminhasenha" i] #TABLE2 td.DataDescriptionCell span{color:${c(P.apagado)}!important;font-family:inherit!important;font-size:12px!important;font-weight:600!important}
+form[action^="wp_esqueciminhasenha" i] #span_vUSUARIO_IDENTIFICADOR{color:${c(P.texto)}!important;font-family:inherit!important;font-weight:600!important}
+form[action^="wp_esqueciminhasenha" i] #captchaImage{display:grid;grid-template-columns:auto auto;justify-content:start;align-items:end;gap:6px 10px}
+form[action^="wp_esqueciminhasenha" i] #captchaImage br{display:none}
+form[action^="wp_esqueciminhasenha" i] #captchaImage img{border-radius:5px;border:1px solid ${c(P.borda)}}
+form[action^="wp_esqueciminhasenha" i] #captchaImage input{grid-column:1;width:140px;height:26px;box-sizing:border-box;border-radius:5px;padding:0 8px}
+form[action^="wp_esqueciminhasenha" i] #TABLEACTIONS{float:none!important;margin-left:auto}
+/* árvore YUI TreeView (Delegar, Grupo de Acesso > Menu): linhas e caixas +/- eram GIFs pretos; viram traços na cor da
+   borda desenhados com degradês, e a caixa +/- fica no div.ygtvspacer da célula */
+td:is(.ygtvdepthcell,.ygtvtn,.ygtvln,.ygtvtm,.ygtvtmh,.ygtvtp,.ygtvtph,.ygtvlm,.ygtvlmh,.ygtvlp,.ygtvlph){background:none!important}
+td.ygtvdepthcell{background:linear-gradient(${linhaArv},${linhaArv}) 7px 0/1px 100% no-repeat!important}
+td:is(.ygtvtn,.ygtvtm,.ygtvtmh,.ygtvtp,.ygtvtph){background:linear-gradient(${linhaArv},${linhaArv}) 7px 0/1px 100% no-repeat,linear-gradient(${linhaArv},${linhaArv}) 8px 50%/8px 1px no-repeat!important}
+td:is(.ygtvln,.ygtvlm,.ygtvlmh,.ygtvlp,.ygtvlph){background:linear-gradient(${linhaArv},${linhaArv}) 7px 0/1px 50% no-repeat,linear-gradient(${linhaArv},${linhaArv}) 8px 50%/8px 1px no-repeat!important}
+td:is(.ygtvtm,.ygtvtmh,.ygtvtp,.ygtvtph,.ygtvlm,.ygtvlmh,.ygtvlp,.ygtvlph)>.ygtvspacer{box-sizing:border-box;width:11px;height:11px;margin:0 0 0 2px;border:1px solid ${x('borda', 'texto', .3)};border-radius:3px;position:relative;z-index:1}
+td:is(.ygtvtm,.ygtvtmh,.ygtvlm,.ygtvlmh)>.ygtvspacer{background:linear-gradient(${c(P.texto)},${c(P.texto)}) center/5px 1px no-repeat,${c(P.superficie)}}
+td:is(.ygtvtp,.ygtvtph,.ygtvlp,.ygtvlph)>.ygtvspacer{background:linear-gradient(${c(P.texto)},${c(P.texto)}) center/5px 1px no-repeat,linear-gradient(${c(P.texto)},${c(P.texto)}) center/1px 5px no-repeat,${c(P.superficie)}}
+td:is(.ygtvtmh,.ygtvtph,.ygtvlmh,.ygtvlph)>.ygtvspacer{border-color:${c(P.azul)}}
+a.BasicNodeTextDecoration{color:${c(P.texto)}!important;text-decoration:none!important}
+a.BasicNodeTextDecoration:hover span{color:${c(P.azul)}}
+.NodeTextDecorationSelected{background-color:${x('fundo', 'azul', e.escuro ? .28 : .16)}!important;color:${c(P.texto)}!important;border-radius:4px;padding:1px 4px;margin-left:-4px}
+/* caixas com título (fieldset.Contorno, usadas em várias telas): borda arredondada na cor do tema e título em destaque */
+fieldset.Contorno{border:1px solid ${c(P.borda)}!important;border-radius:8px}
+legend.ContornoTitle{color:${c(P.texto)}!important;padding:0 6px!important}
+/* Grupo de Acesso > Menu (wp_grupoacessomenu): os dois fieldsets têm width/height 100% + margem e padding, então a árvore
+   vazava pela direita e por baixo; aqui viram dois cartões alinhados no topo, cada um com a altura do conteúdo */
+form[action^="wp_grupoacessomenu" i] #TABLE>tbody>tr>td{vertical-align:top!important}
+form[action^="wp_grupoacessomenu" i] :is(#GROUP,#GROUPSEL){box-sizing:border-box;height:auto!important;margin:0 4px!important;padding:6px 10px 10px!important;background:${c(P.fundo)}}
+form[action^="wp_grupoacessomenu" i] #Grid1ContainerTbl td{vertical-align:middle!important}
 /* OS (wp_oficinaitem), "Serviços e Produtos": tabela montada à mão (cabeçalho com bgcolor azul, linhas em tabelas
    aninhadas). Vira um cartão como as grades acima: cabeçalho discreto e corpo com divisórias e realce. Larguras não mudam:
    a borda é contorno (outline) e o cabeçalho encosta no corpo com margem negativa (cellspacing/cellpadding de 2px),
@@ -2486,6 +2575,15 @@ ${MATIZES.map(m => `.dt-svg .dt-k-${m}{color:${c(P[m])}}`).join('\n')}
         s += `
 fieldset[id^="GROUPLEGENDA" i] td[data-dt-cat]{background:var(--dt-cat)!important;border-radius:5px;box-shadow:0 1px 2px rgba(0,0,0,${e.escuro ? .35 : .12})}
 `;
+        // árvore YUI (Delegar, Grupo de Acesso > Menu): o ícone do nó é fundo inline do <a> (padding-left 20px)
+        const noArvore = (arq, nome, cor) => `a.BasicNodeTextDecoration[style*="${arq}" i]{background-image:none!important;position:relative}
+a.BasicNodeTextDecoration[style*="${arq}" i]::before{content:'';position:absolute;left:0;top:50%;width:16px;height:16px;margin-top:-6px;background-color:${c(P[cor])};${mascara(nome, '16px')}}
+`;
+        s += noArvore('customIcons/folder', 'pasta', 'amarelo') + noArvore('customIcons/folderopen', 'pastaAberta', 'amarelo')
+            + noArvore('customIcons/page', 'documento', 'azul')
+            + noArvore('selectRow', 'checkGrosso', 'verde') + noArvore('unselectRow', 'checkGrosso', 'vermelho')
+            + noArvore('WorkflowOrganizationalModel', 'predio', 'azul') + noArvore('WorkflowRole', 'usuarios', 'magenta')
+            + noArvore('WorkflowUser', 'usuario', 'ciano');
         if (!ext) return s;
         // ExtJS: o ícone vira máscara pintada com a cor do texto
         const ico = (sels, nome, tam) => {
