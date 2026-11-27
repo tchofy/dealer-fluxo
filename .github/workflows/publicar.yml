@@ -1,0 +1,150 @@
+name: Publicar
+
+# Publica uma versão nova nas lojas quando uma tag de versão é enviada:
+#     git tag -a v1.3.0 -m "Novidades: ..."     (a mensagem da tag vira o texto da versão no GitHub)
+#     git push origin v1.3.0
+# A tag precisa ser igual ao @version do userscript.js. Antes de enviar, roda todos os testes.
+# "Run workflow" (aba Actions) só confere as chaves das lojas e mostra o que cada uma tem publicado: não envia nada.
+# Chaves e como gerá-las: extensao/README.md, seção Publicar.
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+concurrency:
+  group: publicar
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------- só conferir as chaves (Run workflow)
+  conferir:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: lojas
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "pyjwt[crypto]"
+      - name: Chrome Web Store
+        env:
+          CWS_CONTA_SERVICO: ${{ secrets.CWS_CONTA_SERVICO }}
+          CWS_PUBLISHER_ID: ${{ vars.CWS_PUBLISHER_ID }}
+        run: python3 extensao/lojas.py chrome-conferir
+      - name: addons.mozilla.org
+        if: always()
+        env:
+          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: python3 extensao/lojas.py firefox-conferir
+
+  # ---------------------------------------------------------------- publicar (tag)
+  testes:
+    if: github.event_name == 'push'
+    uses: ./.github/workflows/testes.yml
+    secrets: inherit
+
+  pacotes:
+    needs: testes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      versao: ${{ steps.versao.outputs.versao }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: A tag é a versão do userscript.js
+        id: versao
+        run: |
+          VERSAO=$(sed -n 's#^// @version *##p' userscript.js | head -1)
+          TAG="${GITHUB_REF_NAME}"
+          if [ "v$VERSAO" != "$TAG" ]; then
+            echo "::error::A tag $TAG não bate com o @version do userscript.js ($VERSAO)"; exit 1
+          fi
+          echo "versao=$VERSAO" >> "$GITHUB_OUTPUT"
+      - name: Build
+        run: python3 extensao/build.py
+      - name: O build não muda o código versionado
+        run: git diff --exit-code
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pacotes
+          path: extensao/dist/*-${{ steps.versao.outputs.versao }}.zip
+          if-no-files-found: error
+
+  chrome:
+    needs: pacotes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: lojas
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "pyjwt[crypto]"
+      - uses: actions/download-artifact@v4
+        with:
+          name: pacotes
+          path: pacotes
+      - name: Enviar e mandar para revisão
+        env:
+          CWS_CONTA_SERVICO: ${{ secrets.CWS_CONTA_SERVICO }}
+          CWS_PUBLISHER_ID: ${{ vars.CWS_PUBLISHER_ID }}
+        run: python3 extensao/lojas.py chrome-publicar "pacotes/dealer-fluxo-chrome-${{ needs.pacotes.outputs.versao }}.zip"
+
+  firefox:
+    needs: pacotes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: lojas
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/download-artifact@v4
+        with:
+          name: pacotes
+          path: pacotes
+      - name: Enviar para revisão (canal da página da loja)
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
+          WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: |
+          mkdir firefox && unzip -q "pacotes/dealer-fluxo-firefox-${{ needs.pacotes.outputs.versao }}.zip" -d firefox
+          # --approval-timeout 0: não espera a revisão da Mozilla (ela publica sozinha quando aprovar)
+          npx --yes web-ext@8 sign --source-dir firefox --artifacts-dir assinado --channel listed --approval-timeout 0
+
+  versao-github:
+    needs: [pacotes, chrome, firefox]
+    if: always() && needs.pacotes.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: pacotes
+          path: pacotes
+      - name: Versão no GitHub com os pacotes (texto = mensagem da tag)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHROME: ${{ needs.chrome.result }}
+          FIREFOX: ${{ needs.firefox.result }}
+        run: |
+          git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+          git for-each-ref "refs/tags/${GITHUB_REF_NAME}" --format='%(contents)' > notas.md
+          [ -s notas.md ] || echo "Dealer/Fluxo ${GITHUB_REF_NAME#v}" > notas.md
+          printf '\n---\nChrome Web Store: %s · Firefox: %s\n' "$CHROME" "$FIREFOX" >> notas.md
+          gh release create "$GITHUB_REF_NAME" pacotes/*.zip --title "Dealer/Fluxo ${GITHUB_REF_NAME#v}" --notes-file notas.md
+          [ "$CHROME" = success ] && [ "$FIREFOX" = success ] || { echo "::error::Uma das lojas falhou (veja acima)"; exit 1; }

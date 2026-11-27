@@ -91,6 +91,54 @@ da página onde foi ativado (ex.: `portal.exemplo.com.br/Portal/default.html`), 
 
 ## Publicar
 
+### Versão nova (automático, por tag)
+
+1. Suba o `@version` (e `VERSAO_FLUXO`) no `userscript.js`, rode `python3 extensao/build.py` e faça o commit.
+2. Crie e envie a tag com as novidades na mensagem (ela vira o texto da versão no GitHub):
+   ```bash
+   git tag -a v1.3.0 -m "Novidades da 1.3.0: ..."
+   git push origin v1.3.0
+   ```
+3. O `.github/workflows/publicar.yml` roda todos os testes, gera os pacotes, confere que a tag é a versão, envia para a
+   Chrome Web Store e para a addons.mozilla.org (as duas mandam para revisão e publicam sozinhas quando aprovarem) e
+   cria a versão no GitHub com os dois `.zip`. Se o ambiente `lojas` pedir aprovação, aprove na aba Actions.
+
+Capturas de tela, vídeo e textos da página continuam sendo trocados à mão nos painéis das lojas (a API da Chrome
+Web Store não mexe neles).
+
+Para conferir as chaves sem publicar nada: aba Actions > Publicar > **Run workflow** (mostra a versão publicada e a
+em revisão de cada loja). Localmente: `pip install "pyjwt[crypto]"` e `python3 extensao/lojas.py chrome-conferir` /
+`firefox-conferir` com as variáveis abaixo.
+
+### Chaves (uma vez só)
+
+Ficam no ambiente **`lojas`** do repositório (Settings > Environments > lojas). Em *Deployment protection rules*
+dá para exigir a sua aprovação antes de cada envio às lojas.
+
+- **Chrome Web Store** (conta de serviço do Google; a API v1 e o fluxo antigo com refresh token não são usados):
+  1. No [Google Cloud Console](https://console.cloud.google.com/), crie um projeto e ative a **Chrome Web Store API**.
+  2. Em *IAM e administrador > Contas de serviço*, crie uma conta de serviço (não precisa de papel nenhum) e, nela,
+     *Chaves > Adicionar chave > JSON*. Guarde o arquivo baixado.
+  3. No [painel da Chrome Web Store](https://chrome.google.com/webstore/devconsole), em **Conta**, adicione o e-mail da
+     conta de serviço (só uma por editor).
+  4. No mesmo painel, *Publisher > Settings*: copie o **ID do editor**.
+  5. No GitHub: segredo `CWS_CONTA_SERVICO` = o conteúdo inteiro do JSON; variável `CWS_PUBLISHER_ID` = o ID do editor.
+     ```bash
+     gh secret set CWS_CONTA_SERVICO --env lojas < chave-da-conta-de-servico.json
+     gh variable set CWS_PUBLISHER_ID --env lojas --body "<ID do editor>"
+     ```
+     Depois apague o JSON do computador.
+- **addons.mozilla.org**: no [Developer Hub](https://addons.mozilla.org/developers/addon/api/key/), gere a chave da
+  API (*JWT issuer* e *JWT secret*) e grave:
+  ```bash
+  gh secret set AMO_JWT_ISSUER --env lojas
+  gh secret set AMO_JWT_SECRET --env lojas
+  ```
+- A API da Chrome Web Store só atualiza itens que já existem e publica com a visibilidade salva no painel: se a
+  visibilidade for mudada à mão, a próxima publicação precisa ser feita à mão uma vez.
+
+### Primeira publicação e textos das lojas
+
 - **Chrome Web Store:** conta de desenvolvedor (taxa única), envie `dist/dealer-fluxo-chrome-<versão>.zip`.
   Na descrição, mencione a doação opcional: "Na aba Sobre há a opção de doar por Pix;
   nada depende disso." No formulário: finalidade única = "melhorar a interface do portal DealerNet Workflow". Em *Privacidade*:
@@ -101,7 +149,7 @@ da página onde foi ativado (ex.: `portal.exemplo.com.br/Portal/default.html`), 
 - **Firefox (addons.mozilla.org):** envie `dist/dealer-fluxo-firefox-<versão>.zip`. O campo "Contributions URL"
   do AMO só aceita alguns serviços (PayPal, Ko-fi, Buy Me a Coffee...), não Pix: a doação fica só dentro da extensão. Na descrição da página,
   diga o que é enviado (o mesmo texto da política de privacidade) e informe a URL da política. O ID
-  `dealer-fluxo@igorslime` (em `build.py`) liga as atualizações à mesma extensão. Troque antes
+  `dealerfluxo@igorslime` (`ID_FIREFOX` em `build.py`) liga as atualizações à mesma extensão. Troque antes
   da primeira publicação se quiser, mas **nunca depois**.
 - Na Chrome Web Store, `optional_host_permissions` amplo costuma passar por revisão mais detalhada; use as
   justificativas acima.

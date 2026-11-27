@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:        # botão "Run workflow" na aba Actions
+  workflow_call:            # chamado pelo publicar.yml antes de enviar uma versão às lojas
 
 concurrency:
   group: testes-${{ github.ref }}
