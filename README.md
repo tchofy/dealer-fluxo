@@ -24,6 +24,9 @@
 - **Barra de tarefas** no rodapé com as janelas abertas: clique para alternar, arraste para reordenar, botão do
   meio fecha, clique direito para minimizar, duplicar, voltar ao início e reabrir janelas fechadas.
 - **Aparência dos botões** à escolha: formatos, preenchimentos e efeitos, com estilos prontos.
+- **Busca no menu**: a lupa (na barra de status, ou no começo da barra de tarefas quando há janelas abertas) ou Alt+M
+  acha qualquer tela do menu pelo nome, sem passar pelos submenus, e mostra onde ela fica (com o módulo em negrito). A lupa
+  pode ficar também no alto ou escondida.
 - **Atalhos de teclado** que funcionam com o cursor dentro das telas, todos configuráveis.
 - **Aviso de novos fluxos** na Caixa de Entrada, com som opcional e escolha de quais fluxos avisar.
 - **Avisos das telas em destaque**: as mensagens em vermelho aparecem no meio da tela, com botão para copiar.

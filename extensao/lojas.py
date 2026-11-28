@@ -52,7 +52,15 @@ def pedir(metodo, url, token=None, corpo=None, tipo="application/json", cabecalh
             return json.loads(texto)
     except urllib.error.HTTPError as e:
         detalhe = e.read().decode(errors="replace")[:1500]
-        falhar(f"{metodo} {url.split('?')[0]} respondeu {e.code}: {detalhe}")
+        try:  # em uma linha só: no GitHub, as linhas "{" e "}" sozinhas saem mascaradas (o JSON da chave tem essas linhas)
+            detalhe = json.loads(detalhe).get("error", {}).get("message") or detalhe
+        except ValueError:
+            pass
+        dica = ""
+        if e.code == 403 and "chromewebstore" in url:
+            dica = (" | A conta de serviço acima precisa ser a mesma do painel da loja (Configurações > Conta de serviço),"
+                    " e o item precisa ser deste publisher.")
+        falhar(f"{metodo} {url.split('?')[0]} respondeu {e.code}: {detalhe}{dica}")
 
 
 # ---------------------------------------------------------------- Chrome Web Store
@@ -76,6 +84,8 @@ def token_chrome():
         falhar(f"o Google recusou a conta de serviço ({e.code}): {e.read().decode(errors='replace')[:500]}")
     if NO_GITHUB:
         print(f"::add-mask::{token}")
+    # o e-mail não é segredo e é o que precisa estar no painel da loja (Configurações > Conta de serviço)
+    print(f"  conta de serviço: {email} (projeto {conta.get('project_id', '?')})")
     return token
 
 

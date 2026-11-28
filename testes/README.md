@@ -59,6 +59,9 @@ Chromium simula rede lenta.
   relatório (Financeiro > Relatórios > Contas a Receber > Títulos Emitidos a Receber);
 - avisos das telas (mensagens em vermelho do GeneXus): cartão no meio com "Copiar erro(s)" e "Fechar" à direita,
   clicar fecha, mouse em cima pausa, vai para a pílula "Aviso" depois de 3 s, tempo configurável, opção para desligar;
+- busca no menu: lupa na barra de status que vira o botão Iniciar da barra de tarefas quando há janelas; acha a tela pelo
+  nome (tolerando erro de digitação), com o caminho e o módulo em negrito; Enter abre, Alt+M de dentro das telas, recentes,
+  Esc/clique fora fecham; posições "só barra de status", "no alto" e "escondido" (só o atalho).
 - busca nas listas de opções: lista longa (simulada na tela de Pessoas) abre com campo de busca que tolera erros de
   digitação e acentos; Enter, clique e F4; Esc fecha sem mudar; lista com até 5 opções e opção desligada ficam normais;
 - notificação de fluxos: tarefas e troca de filtros não geram aviso, aumento gera; aviso no canto superior direito; clicar no sino marca o fluxo; clique do meio no aviso só fecha; som (opcional) só para fluxos novos; escolha do som e volume até 200% (com aviso de risco acima de 100%);

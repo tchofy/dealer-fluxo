@@ -458,7 +458,7 @@ def layout_barra(p):
     b = p.abrir_pesquisas()
     p.esperar(500)
     verificar(p.js("() => document.getElementById('barraDeTarefas').style.display !== 'none'"), "barra não apareceu")
-    verificar(p.js("() => document.querySelectorAll('#barraDeTarefas button').length") == 2, "deveria ter 2 botões")
+    verificar(p.js("() => document.querySelectorAll('#barraDeTarefas button[data-window-id]').length") == 2, "deveria ter 2 botões")
     p.verificar_na_tela("#barraDeTarefas", "barra de tarefas")
     p.verificar_na_tela("#W5-minimized-menu", "botão Minimizadas do portal (barra de status)")
     p.verificar_na_tela("#barraTarefasBotaoStatus", "botão da engrenagem")
@@ -1099,6 +1099,90 @@ def aviso_tela(p):
     verificar(frame.locator("#dnf-aviso").count() == 0, "o cartão apareceu com a opção desligada")
     verificar(tela("(doc) => getComputedStyle(doc.querySelector('#gxErrorViewer > div')).borderLeftWidth") != "3px",
               "a mensagem original continuou destacada com a opção desligada")
+
+
+@teste("Busca no menu: lupa na barra de status (sem janelas) que vira o botão Iniciar da barra de tarefas (com janelas); acha a tela pelo nome com erro de digitação, caminho com o módulo em negrito, Enter abre; Alt+M de dentro de uma tela, recentes, Esc e clique fora fecham; posições 'só barra de status', 'no alto' (no lugar do logotipo) e 'escondido' (só o atalho)")
+def busca_menu(p):
+    p.preparar()
+    pg = p.page
+    p.js("() => localStorage.removeItem('DealerBarraDeTarefas.menuRecentes')")
+    status, iniciar, alto = pg.locator("#barraTarefasBuscaMenuStatus"), pg.locator("#barraDeTarefas .dbtIniciar"), pg.locator("#barraTarefasBuscaMenuAlto")
+    painel, campo = pg.locator("#dbtBuscaMenu"), pg.locator("#dbtBuscaMenu input")
+    caixa = lambda loc: loc.bounding_box()
+    verificar(status.is_visible() and not iniciar.is_visible() and not alto.is_visible(),
+              "sem janelas, a lupa deveria estar só na barra de status")
+    status.click()
+    p.esperar(300)
+    verificar(painel.is_visible() and p.js("() => document.activeElement === document.querySelector('#dbtBuscaMenu input')"),
+              "o painel não abriu com o foco no campo")
+    verificar(caixa(painel)["y"] + caixa(painel)["height"] <= caixa(status)["y"] + 1, "o painel deveria abrir para cima da barra de status")
+    campo.fill("pesoas")                                        # erro de digitação de propósito
+    p.esperar(300)
+    primeiro = painel.locator("li.dbtBuscaMenuItem").first
+    verificar(primeiro.locator(".dbtBuscaMenuNome").inner_text().strip() == "Pessoas",
+              f"o primeiro resultado de 'pesoas' deveria ser Pessoas, veio {primeiro.inner_text()!r}")
+    caminho = primeiro.get_attribute("title").split(" > ")
+    verificar(primeiro.locator(".dbtBuscaMenuCaminho b").inner_text().strip() == caminho[0],
+              "o módulo (primeira parte do caminho) não está em negrito")
+    antes = p.js("() => oW5Portal.windows.length")
+    pg.keyboard.press("Enter")
+    p.esperar_js(f"() => oW5Portal.windows.length > {antes}", 15000, "Enter não abriu a tela")
+    janela = p.ativa()
+    p.esperar_tela_carregada(janela)
+    verificar(painel.count() == 0, "o painel não fechou ao abrir a tela")
+    verificar("pessoa" in p.js("() => oW5Portal.windows[oW5Portal.windows.length - 1].title").lower(), "abriu outra tela")
+    verificar(iniciar.is_visible() and not status.is_visible(), "com janela aberta, a lupa deveria virar o botão Iniciar da barra de tarefas")
+    verificar(caixa(iniciar)["x"] < caixa(p.botao(janela))["x"], "o botão Iniciar deveria ser o primeiro da barra")
+    # Alt+M com o foco dentro da tela; com o campo vazio aparecem as recentes
+    p.tela(janela).locator("input[type=text]").first.click()
+    pg.keyboard.press("Alt+KeyM")
+    p.esperar(400)
+    verificar(painel.is_visible(), "Alt+M (com o foco na tela) não abriu a busca")
+    verificar(painel.locator("li.dbtBuscaMenuItem").first.get_attribute("title") == " > ".join(caminho),
+              "a tela aberta não aparece nas recentes")
+    pg.keyboard.press("Escape")
+    p.esperar(200)
+    verificar(painel.count() == 0, "Esc não fechou a busca")
+    iniciar.click()
+    p.esperar(300)
+    verificar(painel.is_visible() and caixa(painel)["y"] + caixa(painel)["height"] <= caixa(iniciar)["y"] + 1,
+              "o botão Iniciar não abriu a busca para cima")
+    campo.fill("zzqxw")
+    p.esperar(200)
+    verificar(painel.locator("li.dbtBuscaMenuVazio").count() == 1, "sem resultados deveria mostrar o aviso")
+    pg.mouse.click(640, 300)
+    p.esperar(300)
+    verificar(painel.count() == 0, "clicar fora não fechou a busca")
+    iniciar.click(button="right")
+    p.esperar(300)
+    verificar(p.js("() => !!Ext.menu.MenuMgr && document.querySelectorAll('.x-menu').length > 0 && [...document.querySelectorAll('.x-menu')].some(m => m.offsetParent)"),
+              "clique direito no botão Iniciar deveria abrir o menu da barra")
+    p.js("() => { Ext.menu.MenuMgr.hideAll(); oW5Portal.closeAllWindows(); localStorage.removeItem('DealerBarraDeTarefas.menuRecentes'); }")
+    p.esperar(800)
+    verificar(status.is_visible() and not iniciar.is_visible(), "ao fechar as janelas, a lupa deveria voltar para a barra de status")
+
+    # Só na barra de status: continua lá com janelas abertas
+    p.preparar({"buscaMenuPosicao": "status"})
+    p.abrir_pessoas()
+    verificar(status.is_visible() and not iniciar.is_visible(), "na posição 'barra de status', a lupa não deveria ir para a barra de tarefas")
+    p.js("() => oW5Portal.closeAllWindows()")
+    # No alto, no lugar do logotipo: abre para baixo
+    p.preparar({"buscaMenuPosicao": "alto"})
+    verificar(alto.is_visible() and not status.is_visible(), "na posição 'no alto', a lupa deveria estar só no alto")
+    verificar(caixa(alto)["x"] < 60, "a lupa do alto deveria ficar à esquerda, no lugar do logotipo")
+    alto.click()
+    p.esperar(300)
+    verificar(painel.is_visible() and caixa(painel)["y"] >= caixa(alto)["y"] + caixa(alto)["height"] - 1, "a lupa do alto não abriu a busca para baixo")
+    pg.keyboard.press("Escape")
+    # Escondido: nenhum botão, mas o atalho abre (no alto e no meio da tela)
+    p.preparar({"buscaMenuPosicao": "oculto"})
+    verificar(not status.is_visible() and not alto.is_visible() and not iniciar.is_visible(), "na posição 'escondido' apareceu uma lupa")
+    pg.keyboard.press("Alt+KeyM")
+    p.esperar(300)
+    verificar(painel.is_visible(), "com a lupa escondida, Alt+M deveria abrir a busca")
+    meio = caixa(painel)["x"] + caixa(painel)["width"] / 2
+    verificar(abs(meio - pg.viewport_size["width"] / 2) < 20, "com a lupa escondida, a busca deveria abrir no meio da tela")
+    pg.keyboard.press("Escape")
 
 
 @teste("Busca nas listas: lista própria igual à do navegador (digitar o começo, letra repetida, Tab, setas, Esc); Alt+F e a barra do alto passam para a busca (com erros de digitação); botão colado à seta; listas curtas e opção desligada ficam com a do navegador")

@@ -69,7 +69,7 @@
 // "Tema Escuro"; o trecho abaixo é copiado de lá por extensao/build.py. Na extensão ele é um content script
 // próprio (dealer-tema.js) e este trecho não vai junto. As opções ficam em Configurações > Tema.
 // ==== Dealer/Tema (gerado a partir de ../Tema Escuro/dealer-tema.lib.js, não editar aqui) ====
-// Dealer/Tema 1.17.8 — biblioteca de temas de cores para o DealerNet Workflow.
+// Dealer/Tema 1.17.9 — biblioteca de temas de cores para o DealerNet Workflow.
 // Usada só embutida no Dealer/Fluxo (não é um userscript instalável sozinho). Fonte única: este arquivo,
 // copiado sem alterações para dentro do Dealer/Fluxo pelo build dele. Como integrar e a API
 // (window.DealerTema): INTEGRACAO-DEALER-FLUXO.md. Precisa rodar em document-start no Portal/default.html, no LoginAux.aspx (tela de login) e no wp_esqueciminhasenha.aspx.
@@ -108,7 +108,7 @@ function dealerTema(window, document) {
     if (document.__dealerTema || window.location.protocol === 'about:') return;
     document.__dealerTema = true;
 
-    const VERSAO = '1.17.8';
+    const VERSAO = '1.17.9';
     const CHAVE = 'DealerTema.config';
     const PREFIXO = 'dealer-tema';
 
@@ -2240,6 +2240,8 @@ input[type="image"][src*="/btn" i],img[src*="/btn" i],input[type="image"][src*="
 .x-window-tl{border-radius:7px 7px 0 0;border-bottom:1px solid ${c(P.borda)};background-color:${c(P.elevado)}!important;
   background-image:linear-gradient(to bottom,${e.escuro ? x('elevado', 'texto', .07) : c(P.fundo)},${c(P.elevado)})!important;box-shadow:inset 0 1px 0 ${e.escuro ? 'rgba(255,255,255,.05)' : 'rgba(255,255,255,.7)'}}
 .x-window-tr,.x-window-tc,.x-window-maximized .x-window-tc,.x-window-tl .x-window-header{background:transparent!important}
+/* maximizada ocupa a área toda: cantos retos */
+.x-window-maximized,.x-window-maximized .x-window-tl{border-radius:0!important}
 .x-toolbar{background-color:${c(P.superficie)};border-color:${c(P.borda)}}
 .x-menu{background-color:${c(P.superficie)};border-color:${c(P.borda)}}
 /* item de menu em foco: o ExtJS pinta o <li> (quadrado, com borda); o realce fica só no <a> arredondado */
@@ -3161,6 +3163,7 @@ dealerTema(window, document);
         avisosTelaSegundos: 3,                 // ... por quanto tempo no meio da tela antes de virar o botão "Aviso"
         buscaListas: true,                     // nossa lista com busca (barra, botão e Alt+F); false = a do navegador
         buscaListasMinimo: 5,                  // ... só nas listas com mais opções que isso
+        buscaMenuPosicao: 'barra',             // onde fica o botão da busca no menu (chaves de POSICOES_BUSCA_MENU); o atalho sempre funciona
         documentosOSJanelas: true,             // impressão da OS: documentos marcados em janelas em vez de baixar
         sufixoCopia: ' (Cópia)',
         tutoriaisOcultos: {},
@@ -3179,7 +3182,8 @@ dealerTema(window, document);
             duplicar: 'Alt+Shift+KeyD',
             fechar: 'Alt+Shift+KeyW',
             configuracoes: 'Alt+Shift+KeyC',
-            buscaLista: 'Alt+KeyF'            // só com uma lista de opções selecionada
+            buscaLista: 'Alt+KeyF',           // só com uma lista de opções selecionada
+            buscaMenu: 'Alt+KeyM'
         },
         fluxos: {
             ativo: false,                      // desligado nas instalações novas (as antigas ficam como estavam: carregarConfig)
@@ -3198,6 +3202,14 @@ dealerTema(window, document);
         }
     };
 
+    // Onde fica o botão (lupa) da busca no menu. O atalho (Alt+M) funciona em todas, inclusive "escondido".
+    const POSICOES_BUSCA_MENU = {
+        barra: 'Na barra de status; com janelas abertas, no começo da barra de tarefas (botão Iniciar)',
+        status: 'Sempre na barra de status',
+        alto: 'No alto, à esquerda (no lugar do logotipo)',
+        oculto: 'Escondido (só o atalho)'
+    };
+
     const DESCRICAO_ATALHOS = {
         proxima: 'Ir para a janela da direita',
         anterior: 'Ir para a janela da esquerda',
@@ -3208,7 +3220,8 @@ dealerTema(window, document);
         duplicar: 'Duplicar a janela ativa',
         fechar: 'Fechar a janela ativa',
         configuracoes: 'Abrir as configurações',
-        buscaLista: 'Buscar na lista de opções selecionada'
+        buscaLista: 'Buscar na lista de opções selecionada',
+        buscaMenu: 'Buscar uma tela no menu'
     };
 
     let config = carregarConfig();
@@ -3606,6 +3619,23 @@ dealerTema(window, document);
             ${B}.dbtf-circulo button.concluido { box-shadow: inset 0 0 0 2px #3c9a46; }
             ${B}.dbtf-circulo button.concluido::before { content: none; }
 
+            /* Botão "Iniciar" (busca no menu) no começo da barra: sempre o primeiro, parado ao rolar, só com a lupa.
+               Nos formatos com doca ele toma o lugar dela, com a mesma forma, e o primeiro botão encaixa nele. */
+            ${B} button.dbtIniciar {
+                position: sticky; left: 0; z-index: 2; flex: none; padding: 0; margin-left: 0; text-overflow: clip;
+                width: ${h + 6}px; min-width: ${h + 6}px; max-width: ${h + 6}px;
+            }
+            ${B} button.dbtIniciar i { font-size: ${Math.max(11, Math.round(h * 0.48))}px; }
+            ${B} button.dbtIniciar:hover { filter: brightness(1.08); }
+            ${B}.dbtf-circulo button.dbtIniciar::after { content: none; }
+            ${Object.keys(doca).map(f => `${B}.dbtComIniciar.dbtf-${f}::before`).join(', ')} { display: none; }
+            ${Object.entries(doca).map(([f, [largura, forma]]) => `${B}.dbtf-${f} button.dbtIniciar {
+                width: ${largura + 18}px; min-width: ${largura + 18}px; max-width: ${largura + 18}px; margin-left: 0;
+                padding: 0 ${t}px 0 0; clip-path: ${forma}; border-color: transparent; box-shadow: none;
+                background-color: ${tema.corTexto}; background-image: linear-gradient(90deg, ${tema.corTexto}, ${tema.corAtivo});
+                color: ${tema.corTextoAtivo};
+            }`).join('\n            ')}
+
             /* Prévia (aba Barra das configurações) */
             .dbtPreviaFundo { padding: 6px 6px 4px; border: 1px solid #ccc; margin-top: 6px; }
             .dbtPreviaBarra button { font-family: arial, tahoma, verdana, helvetica; }`;
@@ -3665,7 +3695,9 @@ ${V}.dbta-levantado button.ativo { box-shadow: 0 3px 0 #8a2470, 0 6px 14px -4px 
 ${V} button.concluido { box-shadow: inset 0 -3px 0 #46f2a6, 0 0 10px -4px rgba(70,242,166,.8); }
 ${V} button.concluido::before { color: #46f2a6; }
 ${V}.dbtf-circulo button.concluido { box-shadow: inset 0 0 0 2px #46f2a6, 0 0 10px -4px rgba(70,242,166,.8); }
-/* doca dos formatos encaixados */
+/* doca dos formatos encaixados (e o botão Iniciar, quando toma o lugar dela) */
+${V}:is(.dbtf-divisa, .dbtf-inclinado, .dbtf-etiqueta, .dbtf-pontas) button.dbtIniciar { background: linear-gradient(90deg, #3a1760, #8a2470 70%, #ff3ea5);
+    color: #ffffff; box-shadow: none; }
 ${V}::before { background-color: #3a1760; background-image: linear-gradient(90deg, #3a1760, #8a2470 70%, #ff3ea5); }
 ${H} .dbtPreviaFundo { border-color: #4b2d7a; border-radius: 6px; }
 
@@ -3733,6 +3765,20 @@ ${H} .barraTarefasNotificacao .dbtTempo, ${H} .barraTarefasNotificacao .dbtFecha
 ${H} .barraTarefasNotificacao .dbtFechar:hover { color: #ffffff; background: #ff4d6d; }
 ${H} .barraTarefasNotificacao .dbtLinhaFluxo:hover { color: #2de2e6; text-shadow: 0 0 6px rgba(45,226,230,.7); }
 ${H} .barraTarefasNotificacao .dbtAcoes a { color: #2de2e6; }
+
+/* ---- Busca no menu ---- */
+${H} #dbtBuscaMenu { background-color: #22143d; border-color: #ff3ea5; border-radius: 8px; color: #fff0fa;
+    box-shadow: 0 0 0 1px rgba(255,62,165,.25), 0 14px 36px -8px rgba(255,62,165,.6); }
+${H} #dbtBuscaMenu input { background-color: #1a0f2e; border-color: #4b2d7a; border-radius: 6px; color: #fff0fa; }
+${H} #dbtBuscaMenu input:focus { border-color: #ff3ea5; box-shadow: ${foco}; }
+${H} #dbtBuscaMenu .dbtBuscaMenuNome { color: #fff0fa; }
+${H} #dbtBuscaMenu .dbtBuscaMenuCaminho { color: #a48cce; }
+${H} #dbtBuscaMenu .dbtBuscaMenuCaminho b { color: #2de2e6; }
+${H} #dbtBuscaMenu li.dbtBuscaMenuItem.dbtMarcado { background: linear-gradient(100deg, rgba(255,62,165,.35), rgba(255,140,66,.22)); border-left-color: #ff3ea5; }
+${H} #dbtBuscaMenu li.dbtBuscaMenuItem.dbtMarcado .dbtBuscaMenuCaminho { color: #ffd1ec; }
+${H} #dbtBuscaMenu mark { background-color: #ffd23f; color: #1a0f2e; }
+${H} #dbtBuscaMenu :is(li.dbtBuscaMenuTitulo, li.dbtBuscaMenuVazio) { color: #a48cce; }
+${H} #dbtBuscaMenu .dbtBuscaMenuRodape { background-color: #1a0f2e; border-top-color: #4b2d7a; color: #a48cce; }
 
 /* ---- Avisos das telas (dentro de cada tela) ---- */
 ${H} span.ErrorViewer>div { background-color: rgba(255,77,109,.14); border-left-color: #ff4d6d; color: #fff0fa !important; }
@@ -3997,6 +4043,32 @@ ${H} #dnf-lupa:hover { background: ${porDoSol}; filter: brightness(1.12) saturat
             }
             .barraTarefasTutorial i.fa { color: ${tema.corTexto}; }
 
+            /* Busca no menu: lupa na barra de status / no alto (compactas, como a engrenagem) e o painel de resultados */
+            .dbtBuscaMenuStatus { margin-right: 4px; }
+            .dbtBuscaMenuAlto { margin: 0 4px 0 6px; }
+            .dbtBuscaMenuAlto .x-btn-text { font-size: 14px !important; padding: 0 6px !important; }
+            #dbtBuscaMenu {
+                position: fixed; z-index: 14500;          /* acima das janelas, abaixo dos menus do ExtJS (15000) */
+                display: flex; flex-direction: column; max-height: min(70vh, 560px); box-sizing: border-box;
+                background-color: #ffffff; color: #1f2328; border: 1px solid #8a9bb0; border-radius: 6px;
+                box-shadow: 0 10px 30px rgba(0,0,0,.25); font: 12px/1.35 Tahoma, "Segoe UI", Arial, sans-serif; overflow: hidden;
+            }
+            #dbtBuscaMenu input {
+                flex: none; margin: 8px; padding: 6px 9px; border: 1px solid #8a9bb0; border-radius: 4px;
+                background-color: #ffffff; color: #1f2328; font: 13px Tahoma, "Segoe UI", Arial, sans-serif; outline: none;
+            }
+            #dbtBuscaMenu input:focus { border-color: #3b73b9; box-shadow: 0 0 0 2px rgba(59,115,185,.25); }
+            #dbtBuscaMenu ul { flex: 1 1 auto; min-height: 0; margin: 0; padding: 0 0 4px; list-style: none; overflow-y: auto; }
+            #dbtBuscaMenu li.dbtBuscaMenuItem { padding: 5px 12px; cursor: pointer; border-left: 3px solid transparent; }
+            #dbtBuscaMenu li.dbtBuscaMenuItem.dbtMarcado { background-color: #e5eef9; border-left-color: #3b73b9; }
+            #dbtBuscaMenu .dbtBuscaMenuNome { font-size: 13px; color: #1f2328; }
+            #dbtBuscaMenu .dbtBuscaMenuCaminho { margin-top: 1px; font-size: 11px; color: #57606a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            #dbtBuscaMenu .dbtBuscaMenuCaminho b { color: #1f2328; }
+            #dbtBuscaMenu mark { padding: 0; border-radius: 2px; background-color: #ffe58a; color: inherit; }
+            #dbtBuscaMenu li.dbtBuscaMenuTitulo { padding: 4px 12px 2px; font-size: 11px; font-weight: bold; color: #57606a; }
+            #dbtBuscaMenu li.dbtBuscaMenuVazio { padding: 10px 12px; color: #57606a; font-style: italic; }
+            #dbtBuscaMenu .dbtBuscaMenuRodape { flex: none; padding: 4px 12px; border-top: 1px solid #d0d7de; background-color: #f6f8fa; color: #57606a; font-size: 11px; }
+
             /* Avisos de novos fluxos */
             /* No canto superior direito, abaixo da barra do alto e do título das janelas (perto do sino) */
             #barraTarefasNotificacoes {
@@ -4245,7 +4317,8 @@ ${H} #dnf-lupa:hover { background: ${porDoSol}; filter: brightness(1.12) saturat
         reabrir: () => reabrirFechada(0),
         duplicar: () => { const j = janelaAtiva(); if (j) duplicarJanela(j); },
         fechar: () => { const j = janelaAtiva(); if (j) fecharJanela(j); },
-        configuracoes: () => abrirConfiguracoes()
+        configuracoes: () => abrirConfiguracoes(),
+        buscaMenu: () => abrirBuscaMenu()
     };
 
     // Recebe o keydown do portal e de todos os iframes (fase de captura, antes da própria tela)
@@ -4289,6 +4362,7 @@ ${H} #dnf-lupa:hover { background: ${porDoSol}; filter: brightness(1.12) saturat
     // ao documento do portal, então o ExtJS não fecha os menus sozinho nesse caso.
     function fecharMenus() {
         if (Ext.menu && Ext.menu.MenuMgr) Ext.menu.MenuMgr.hideAll();
+        fecharBuscaMenu();
     }
 
     // Chamado quando qualquer iframe termina de carregar (e para os que já existiam ao iniciar)
@@ -4499,6 +4573,7 @@ ${H} #dnf-lupa:hover { background: ${porDoSol}; filter: brightness(1.12) saturat
         barraVisivel = deveMostrar;
 
         containerBotoes.style.display = deveMostrar ? '' : 'none';
+        posicionarBotaoBuscaMenu();
         oW5Portal.statusbar.setHeight(alturaOriginalStatusbar + (deveMostrar ? config.alturaBarra : 0));
         oW5Portal.viewport.doLayout();
 
@@ -4885,6 +4960,9 @@ ${H} #dnf-lupa:hover { background: ${porDoSol}; filter: brightness(1.12) saturat
                     um botão "Aviso" no canto da tela; clique nele para ver o aviso de novo.</li>
                 <li>Temas de cores (inclusive escuros), fonte e tamanho do texto em <b>Configurações &gt; Tema</b> (versão alfa,
                     desligada por padrão). Depois de aceitar os avisos, dá para trocar direto pela engrenagem, em <b>Tema</b> e <b>Fonte</b>.</li>
+                <li>Para abrir uma tela sem passar pelos submenus, clique na lupa <i class="fa fa-search"></i> (na barra de status ou, com
+                    janelas abertas, no começo da barra de tarefas) ou use ${atalho('buscaMenu')}, e digite parte do nome, ex.: <b>O.S.</b> ou <b>nota fiscal</b>. Cada resultado mostra
+                    onde ele fica no menu, com o módulo em negrito; Enter ou clique abre a tela.</li>
                 <li>Listas de opções com muitos itens ganham uma busca: clique em <b>Buscar na lista</b> no alto da lista aberta,
                     no botão &#128269; ao lado da seta ou use ${atalho('buscaLista')}, e digite parte do nome (pode ser mais de uma
                     palavra, e erros de digitação são tolerados). Digitar o começo da opção funciona como antes.</li>
@@ -5565,7 +5643,7 @@ ${H} #dnf-lupa:hover { background: ${porDoSol}; filter: brightness(1.12) saturat
                         ${linha('Ao passar o mouse', 'botaoPassarMouse', PASSAR_MOUSE_BOTAO)}
                         ${linha('Ao abrir uma janela', 'botaoAbertura', ABERTURAS_BOTAO)}
                     </table>
-                    <div class="dbtPreviaFundo"><div class="dbtPreviaBarra">${exemplo.map(([titulo, classe]) =>
+                    <div class="dbtPreviaFundo"><div class="dbtPreviaBarra"><button type="button" class="dbtIniciar" title="Buscar no menu"><i class="fa fa-search"></i></button>${exemplo.map(([titulo, classe]) =>
                         `<button type="button" class="${classe}" data-iniciais="${iniciaisTitulo(titulo)}" title="${titulo}">${titulo}</button>`).join('')}</div></div>
                     <div class="dbtDica">Exemplo: clique num botão para ele virar o ativo. As mudanças aparecem na hora também na barra;
                         Cancelar volta ao que estava antes.</div>
@@ -5597,7 +5675,7 @@ ${H} #dnf-lupa:hover { background: ${porDoSol}; filter: brightness(1.12) saturat
             aplicarAparenciaBotoes(previa, escolha);
             aplicarAparenciaBotoes(containerBotoes, escolha);
             campo('botaoPronto').value = predefinicaoAtual(escolha);
-            if (animar) previa.querySelectorAll('button').forEach((b, i) => setTimeout(() => marcarBotaoNovo(b), i * 70));
+            if (animar) previa.querySelectorAll('button:not(.dbtIniciar)').forEach((b, i) => setTimeout(() => marcarBotaoNovo(b), i * 70));
         };
         CAMPOS_APARENCIA.forEach(([nome]) => campo(nome).addEventListener('change', () => aplicar(nome === 'botaoAbertura')));
         campo('botaoPronto').addEventListener('change', () => {
@@ -5606,8 +5684,17 @@ ${H} #dnf-lupa:hover { background: ${porDoSol}; filter: brightness(1.12) saturat
             CAMPOS_APARENCIA.forEach(([nome], i) => { campo(nome).value = pronto[i + 1]; });
             aplicar(true);
         });
-        previa.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-            previa.querySelectorAll('button').forEach(x => x.classList.toggle('ativo', x === b));
+        // O botão Iniciar (busca no menu) aparece na prévia quando a posição escolhida é a barra de tarefas
+        const posicao = raiz.querySelector('select[name="buscaMenuPosicao"]');
+        const mostrarIniciar = () => {
+            const comIniciar = !posicao || posicao.value === 'barra';
+            previa.classList.toggle('dbtComIniciar', comIniciar);
+            previa.querySelector('.dbtIniciar').hidden = !comIniciar;
+        };
+        if (posicao) posicao.addEventListener('change', mostrarIniciar);
+        mostrarIniciar();
+        previa.querySelectorAll('button:not(.dbtIniciar)').forEach(b => b.addEventListener('click', () => {
+            previa.querySelectorAll('button:not(.dbtIniciar)').forEach(x => x.classList.toggle('ativo', x === b));
             b.classList.remove('botaoMinimizado', 'concluido');
         }));
         aplicarAparenciaBotoes(previa, config);
@@ -5682,6 +5769,14 @@ ${H} #dnf-lupa:hover { background: ${porDoSol}; filter: brightness(1.12) saturat
                             <td><input type="checkbox" name="avisosTela" ${config.avisosTela ? 'checked' : ''}></td></tr>
                         <tr><td>... tempo no meio da tela antes de ir para o botão "Aviso" (segundos)</td>
                             <td><input type="number" name="avisosTelaSegundos" min="1" max="60" step="0.5" value="${config.avisosTelaSegundos}"></td></tr>
+                    </table>
+                </fieldset>
+                <fieldset>
+                    <legend>Busca no menu</legend>
+                    <table>
+                        <tr><td>Botão da busca (lupa), para achar uma tela do menu pelo nome sem passar pelos submenus. O atalho (Alt+M por padrão) funciona em qualquer opção</td>
+                            <td><select name="buscaMenuPosicao" class="dbtSelectAparencia">${Object.entries(POSICOES_BUSCA_MENU).map(([v, t]) =>
+                                `<option value="${v}" ${config.buscaMenuPosicao === v ? 'selected' : ''}>${t}</option>`).join('')}</select></td></tr>
                     </table>
                 </fieldset>
                 <fieldset>
@@ -5805,6 +5900,7 @@ ${H} #dnf-lupa:hover { background: ${porDoSol}; filter: brightness(1.12) saturat
             telemetria: valor('telemetria') ? valor('telemetria').checked : config.telemetria,
             telemetriaSemIcone: valor('telemetriaSemIcone') ? valor('telemetriaSemIcone').checked : config.telemetriaSemIcone,
             buscaListasMinimo: Math.round(numero('buscaListasMinimo', 0, 1000)),
+            buscaMenuPosicao: POSICOES_BUSCA_MENU[valor('buscaMenuPosicao').value] ? valor('buscaMenuPosicao').value : config.buscaMenuPosicao,
             documentosOSJanelas: valor('documentosOSJanelas').checked,
             fluxos: copiar(config.fluxos),     // substituído pelo que está nas abas de fluxos, em abrirConfiguracoes
             atalhos
@@ -6088,6 +6184,7 @@ ${H} #dnf-lupa:hover { background: ${porDoSol}; filter: brightness(1.12) saturat
         reiniciarMonitorFluxos();
         atualizarAvisosTela();
         if (buscaAberta && !config.buscaListas) buscaAberta.fechar(false);
+        posicionarBotaoBuscaMenu();
         enviarEstadoTelemetria();
     }
 
@@ -7904,8 +8001,427 @@ span.ErrorViewer>div{display:block!important;margin:4px 0!important;padding:6px 
             animation: 150,
             direction: 'horizontal',
             ghostClass: 'sortable-ghost',
-            chosenClass: 'sortable-chosen'
+            chosenClass: 'sortable-chosen',
+            filter: '.dbtIniciar',
+            preventOnFilter: false,
+            onMove: (ev) => !(ev.related && ev.related.classList.contains('dbtIniciar'))
         });
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Busca no menu: botão "Buscar" na barra do alto (logo depois dos módulos) e atalho (Alt+M). Lista as telas do
+    // menu do portal pelo nome, com o caminho embaixo e o módulo em negrito; Enter ou clique abre a tela pelo próprio
+    // item do menu (o mesmo que clicar nele). Ignora maiúsculas, acentos e pontos ("os" acha "O.S.", "OS" e as
+    // iniciais de "Ordem de Serviço"), tolera erros de digitação e também acha pelas pastas do caminho ("O.S." lista
+    // tudo o que está dentro de Relatórios > O.S.). Com o campo vazio, mostra as últimas telas abertas pela busca.
+    // ---------------------------------------------------------------------------------------------
+    const CHAVE_MENU_RECENTES = 'DealerBarraDeTarefas.menuRecentes';
+    const MAX_RESULTADOS_MENU = 60;
+    const PALAVRAS_VAZIAS_MENU = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'a', 'o', 'em', 'na', 'no', 'para', 'por', 'com']);
+    let buscaMenu = null;          // painel aberto: { fechar() }
+
+    // Palavras de um texto, com a posição no original (para o realce). "O.S." vira "o" e "s".
+    function palavrasMenu(texto) {
+        const norm = normalizarBusca(texto);
+        const palavras = [];
+        const re = /[a-z0-9]+/g;
+        let m;
+        while ((m = re.exec(norm))) palavras.push({ p: m[0], ini: m.index, fim: m.index + m[0].length });
+        return palavras;
+    }
+
+    // Lê o menu do portal (os botões dos módulos na barra do alto) e devolve as folhas com o caminho
+    function indiceMenu() {
+        const itens = [];
+        const barra = oW5Portal.toolbar;
+        if (!barra || !barra.items) return itens;
+        const andar = (menu, caminho, modulo) => {
+            if (!menu || !menu.items) return;
+            menu.items.each(it => {
+                if (!it.text || it.hidden || it.disabled || typeof it.text !== 'string') return;
+                const texto = it.text.replace(/<[^>]*>/g, '').trim();
+                if (!texto) return;
+                if (it.menu) andar(it.menu, caminho.concat(texto), modulo);
+                else if (it.handler) {
+                    const pastas = caminho.map(t => ({ texto: t, palavras: palavrasMenu(t) }));
+                    itens.push({ item: it, texto, palavras: palavrasMenu(texto), pastas, modulo,
+                                 chave: caminho.concat(texto).join(' > ') });
+                }
+            });
+        };
+        barra.items.each(b => {
+            if (b.menu && typeof b.id === 'string' && b.id.startsWith('W5|') && typeof b.text === 'string') {
+                const modulo = b.text.replace(/<[^>]*>/g, '').trim();
+                andar(b.menu, [modulo], modulo);
+            }
+        });
+        return itens;
+    }
+
+    // Termos da busca: sem acentos/maiúsculas, pontos tirados ("O.S." = "os"); "de", "da"... só contam sozinhos
+    function termosBuscaMenu(texto) {
+        const termos = normalizarBusca(texto).replace(/\./g, '').split(/[^a-z0-9]+/).filter(Boolean);
+        const uteis = termos.filter(t => !PALAVRAS_VAZIAS_MENU.has(t));
+        return uteis.length ? uteis : termos;
+    }
+
+    // Melhor jeito de um termo aparecer nas palavras de um texto. Pontos menores = melhor.
+    // Retorna { pontos, trechos: [[ini, fim], ...] } ou null.
+    function casarTermoMenu(termo, palavras, normTexto) {
+        let melhor = null;
+        const anotar = (pontos, trechos) => { if (!melhor || pontos < melhor.pontos) melhor = { pontos, trechos }; };
+        for (let i = 0; i < palavras.length; i++) {
+            const w = palavras[i];
+            const posicao = Math.min(i, 5) * 0.1;                 // no começo do nome vale um pouco mais
+            if (w.p === termo) anotar(0 + posicao, [[w.ini, w.fim]]);
+            else if (w.p.startsWith(termo)) anotar(0.5 + posicao, [[w.ini, w.ini + termo.length]]);
+            // abreviação com pontos: "o" "s" (de "O.S.") ou "t" "m" "o" (de "T.M.O.")
+            if (termo.length >= 2 && w.p.length === 1 && w.p === termo[0]) {
+                let k = i, resto = termo;
+                const trechos = [];
+                while (k < palavras.length && palavras[k].p.length === 1 && resto.startsWith(palavras[k].p)) {
+                    trechos.push([palavras[k].ini, palavras[k].fim]);
+                    resto = resto.slice(1);
+                    k++;
+                    if (!resto) break;
+                }
+                if (!resto) anotar(0 + posicao, trechos);
+            }
+            // iniciais de palavras seguidas ("os" = "Ordem de Serviço", "nf" = "Nota Fiscal")
+            if (termo.length >= 2 && termo.length <= 5 && w.p[0] === termo[0] && w.p.length > 1) {
+                let k = i, n = 0;
+                const trechos = [];
+                while (k < palavras.length && n < termo.length) {
+                    const pk = palavras[k];
+                    if (n > 0 && PALAVRAS_VAZIAS_MENU.has(pk.p)) { k++; continue; }
+                    if (pk.p[0] !== termo[n]) break;
+                    trechos.push([pk.ini, pk.ini + 1]);
+                    n++;
+                    k++;
+                }
+                if (n === termo.length) anotar(2 + posicao, trechos);
+            }
+        }
+        if (melhor) return melhor;
+        // no meio de uma palavra (só com 3 letras ou mais, senão "os" acharia "Postos")
+        if (termo.length >= 3) {
+            const i = normTexto.indexOf(termo);
+            if (i >= 0) return { pontos: 3, trechos: [[i, i + termo.length]] };
+        }
+        // erros de digitação (1 erro a partir de 4 letras, 2 a partir de 8)
+        const tolerancia = toleranciaBusca(termo.length);
+        if (tolerancia) {
+            const ap = buscarAproximado(termo, normTexto, tolerancia);
+            if (ap) return { pontos: 4 + 3 * ap.erros, trechos: [[ap.inicio, ap.fim]] };
+        }
+        return null;
+    }
+
+    // Pontua uma tela do menu: cada termo precisa aparecer no nome (melhor) ou numa pasta do caminho
+    function pontuarMenu(termos, entrada) {
+        if (!entrada.norm) {
+            entrada.norm = normalizarBusca(entrada.texto);
+            entrada.pastas.forEach(p => { p.norm = normalizarBusca(p.texto); });
+        }
+        let pontos = 0;
+        const realce = { nome: [], pastas: entrada.pastas.map(() => []) };
+        for (const termo of termos) {
+            const noNome = casarTermoMenu(termo, entrada.palavras, entrada.norm);
+            let naPasta = null, qual = -1;
+            entrada.pastas.forEach((p, i) => {
+                const r = casarTermoMenu(termo, p.palavras, p.norm);
+                if (r && (!naPasta || r.pontos < naPasta.pontos)) { naPasta = r; qual = i; }
+            });
+            if (noNome && (!naPasta || noNome.pontos <= naPasta.pontos + 4)) {
+                pontos += noNome.pontos;
+                realce.nome.push(...noNome.trechos);
+            } else if (naPasta) {
+                pontos += naPasta.pontos + 4;
+                realce.pastas[qual].push(...naPasta.trechos);
+            } else {
+                return null;
+            }
+        }
+        // o nome inteiro é exatamente o que foi digitado
+        if (termos.join(' ') === entrada.palavras.map(w => w.p).join(' ') ||
+            termos.join('') === entrada.palavras.map(w => w.p).join('')) pontos -= 2;
+        return { pontos, realce };
+    }
+
+    function buscarNoMenu(texto, indice) {
+        const termos = termosBuscaMenu(texto);
+        if (!termos.length) return [];
+        const achados = [];
+        for (const entrada of indice) {
+            const r = pontuarMenu(termos, entrada);
+            if (r) achados.push({ entrada, ...r });
+        }
+        achados.sort((a, b) => a.pontos - b.pontos || a.entrada.pastas.length - b.entrada.pastas.length ||
+                               a.entrada.texto.localeCompare(b.entrada.texto, 'pt-BR'));
+        return achados;
+    }
+
+    function lerRecentesMenu() {
+        try {
+            const r = JSON.parse(localStorage.getItem(CHAVE_MENU_RECENTES) || '[]');
+            return Array.isArray(r) ? r.filter(x => typeof x === 'string') : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function guardarRecenteMenu(chave) {
+        const lista = [chave, ...lerRecentesMenu().filter(c => c !== chave)].slice(0, 8);
+        try { localStorage.setItem(CHAVE_MENU_RECENTES, JSON.stringify(lista)); } catch (e) { /* sem storage */ }
+    }
+
+    // Abre a tela como se o item do menu tivesse sido clicado
+    function abrirItemMenu(entrada) {
+        const it = entrada.item;
+        guardarRecenteMenu(entrada.chave);
+        try {
+            if (it.fireEvent('click', it, Ext.EventObject) === false) return;
+            it.handler.call(it.scope || it, it, Ext.EventObject);
+        } catch (e) {
+            console.error(`[${NOME_SCRIPT}] Não foi possível abrir "${entrada.chave}"`, e);
+        }
+    }
+
+    function fecharBuscaMenu() {
+        if (buscaMenu) buscaMenu.fechar();
+    }
+
+    function alternarBuscaMenu() {
+        if (buscaMenu) fecharBuscaMenu();
+        else abrirBuscaMenu();
+    }
+
+    function abrirBuscaMenu() {
+        if (buscaMenu) { buscaMenu.focar(); return; }
+        fecharMenus();
+        const indice = indiceMenu();
+        const painel = document.createElement('div');
+        painel.id = 'dbtBuscaMenu';
+        const campo = document.createElement('input');
+        campo.type = 'text';
+        campo.placeholder = 'Buscar tela no menu (ex.: O.S., nota fiscal, pessoas)';
+        campo.setAttribute('autocomplete', 'off');
+        campo.setAttribute('spellcheck', 'false');
+        const lista = document.createElement('ul');
+        const rodape = document.createElement('div');
+        rodape.className = 'dbtBuscaMenuRodape';
+        painel.append(campo, lista, rodape);
+        document.body.appendChild(painel);
+
+        // Junto do botão à vista: para cima se ele estiver embaixo (barra de status, barra de tarefas), para baixo se
+        // estiver no alto. Sem botão (escondido), no alto e no meio da tela.
+        const ancora = gatilhoBuscaMenuVisivel();
+        const caixa = ancora ? ancora.getBoundingClientRect() : null;
+        const largura = Math.min(520, window.innerWidth - 16);
+        painel.style.width = largura + 'px';
+        if (!caixa) {
+            painel.style.left = Math.round((window.innerWidth - largura) / 2) + 'px';
+            painel.style.top = Math.round(window.innerHeight * 0.12) + 'px';
+        } else {
+            painel.style.left = Math.max(8, Math.min(caixa.left, window.innerWidth - largura - 8)) + 'px';
+            if (caixa.top > window.innerHeight / 2) {
+                painel.style.bottom = Math.round(window.innerHeight - caixa.top + 6) + 'px';
+                painel.style.maxHeight = Math.max(200, Math.min(560, caixa.top - 16)) + 'px';
+            } else {
+                painel.style.top = Math.round(caixa.bottom + 4) + 'px';
+            }
+        }
+
+        let resultados = [], marcado = 0;
+        const doc = document;
+        const preencher = (el, texto, trechos) => preencherComRealce(el, texto, trechos || []);
+
+        const desenhar = () => {
+            lista.replaceChildren();
+            const texto = campo.value.trim();
+            let titulo = null;
+            if (!texto) {
+                const porChave = new Map(indice.map(e => [e.chave, e]));
+                resultados = lerRecentesMenu().map(c => porChave.get(c)).filter(Boolean)
+                    .map(entrada => ({ entrada, realce: { nome: [], pastas: entrada.pastas.map(() => []) } }));
+                titulo = resultados.length ? 'Abertas recentemente pela busca' : null;
+            } else {
+                resultados = buscarNoMenu(texto, indice);
+            }
+            marcado = Math.min(marcado, Math.max(0, resultados.length - 1));
+            if (titulo) {
+                const li = doc.createElement('li');
+                li.className = 'dbtBuscaMenuTitulo';
+                li.textContent = titulo;
+                lista.appendChild(li);
+            }
+            resultados.slice(0, MAX_RESULTADOS_MENU).forEach((r, i) => {
+                const li = doc.createElement('li');
+                li.className = 'dbtBuscaMenuItem' + (i === marcado ? ' dbtMarcado' : '');
+                li.dataset.indice = i;
+                const nome = doc.createElement('div');
+                nome.className = 'dbtBuscaMenuNome';
+                preencher(nome, r.entrada.texto, r.realce.nome);
+                const caminho = doc.createElement('div');
+                caminho.className = 'dbtBuscaMenuCaminho';
+                r.entrada.pastas.forEach((p, k) => {
+                    if (k) caminho.appendChild(doc.createTextNode(' › '));
+                    const parte = doc.createElement(k === 0 ? 'b' : 'span');
+                    preencher(parte, p.texto, r.realce.pastas[k]);
+                    caminho.appendChild(parte);
+                });
+                li.append(nome, caminho);
+                li.title = r.entrada.chave;
+                lista.appendChild(li);
+            });
+            if (texto && !resultados.length) {
+                const li = doc.createElement('li');
+                li.className = 'dbtBuscaMenuVazio';
+                li.textContent = 'Nenhuma tela do menu com esse nome.';
+                lista.appendChild(li);
+            } else if (!texto && !resultados.length) {
+                const li = doc.createElement('li');
+                li.className = 'dbtBuscaMenuVazio';
+                li.textContent = `Digite parte do nome da tela. ${indice.length} telas no seu menu.`;
+                lista.appendChild(li);
+            }
+            const mais = resultados.length > MAX_RESULTADOS_MENU ? ` (mostrando ${MAX_RESULTADOS_MENU})` : '';
+            rodape.textContent = (texto ? `${resultados.length} ${resultados.length === 1 ? 'tela' : 'telas'}${mais} · ` : '') +
+                                 '↑↓ escolher · Enter abrir · Esc fechar';
+        };
+
+        const marcar = (i) => {
+            const total = Math.min(resultados.length, MAX_RESULTADOS_MENU);
+            if (!total) return;
+            marcado = (i + total) % total;
+            lista.querySelectorAll('.dbtBuscaMenuItem').forEach(li => li.classList.toggle('dbtMarcado', Number(li.dataset.indice) === marcado));
+            const atual = lista.querySelector('.dbtBuscaMenuItem.dbtMarcado');
+            if (atual) atual.scrollIntoView({ block: 'nearest' });
+        };
+
+        const abrir = (i) => {
+            const r = resultados[i];
+            if (!r) return;
+            fechar();
+            abrirItemMenu(r.entrada);
+        };
+
+        const foraDoPainel = (e) => {
+            if (!painel.contains(e.target) && !(e.target.closest && e.target.closest('.dbtGatilhoBuscaMenu'))) fechar();
+        };
+
+        function fechar() {
+            if (!buscaMenu) return;
+            buscaMenu = null;
+            document.removeEventListener('mousedown', foraDoPainel, true);
+            window.removeEventListener('resize', fechar);
+            painel.remove();
+        }
+
+        campo.addEventListener('input', () => { marcado = 0; desenhar(); lista.scrollTop = 0; });
+        campo.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown') { e.preventDefault(); marcar(marcado + 1); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); marcar(marcado - 1); }
+            else if (e.key === 'PageDown') { e.preventDefault(); marcar(Math.min(marcado + 8, Math.min(resultados.length, MAX_RESULTADOS_MENU) - 1)); }
+            else if (e.key === 'PageUp') { e.preventDefault(); marcar(Math.max(marcado - 8, 0)); }
+            else if (e.key === 'Enter') { e.preventDefault(); abrir(marcado); }
+            else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fechar(); }
+        });
+        lista.addEventListener('mousemove', (e) => {
+            const li = e.target.closest && e.target.closest('.dbtBuscaMenuItem');
+            if (li && Number(li.dataset.indice) !== marcado) marcar(Number(li.dataset.indice));
+        });
+        lista.addEventListener('mousedown', (e) => e.preventDefault());   // o foco fica no campo
+        lista.addEventListener('click', (e) => {
+            const li = e.target.closest && e.target.closest('.dbtBuscaMenuItem');
+            if (li) abrir(Number(li.dataset.indice));
+        });
+        document.addEventListener('mousedown', foraDoPainel, true);
+        window.addEventListener('resize', fechar);
+
+        buscaMenu = { fechar, focar: () => { campo.focus(); campo.select(); } };
+        desenhar();
+        // o foco precisa sair da tela (iframe) para o campo
+        setTimeout(() => campo.focus(), 0);
+    }
+
+    // Os três lugares do botão da busca: barra de status (antes de Workspaces), alto à esquerda (no lugar do
+    // logotipo) e começo da barra de tarefas (botão "Iniciar", sempre o primeiro, não arrasta). Só um aparece por vez,
+    // conforme config.buscaMenuPosicao e se a barra de tarefas está à vista (posicionarBotaoBuscaMenu).
+    let botaoIniciar = null, logoPortal = null;
+
+    function dicaBuscaMenu() {
+        const atalho = config.atalhos.buscaMenu ? ` (${nomeAtalho(config.atalhos.buscaMenu)})` : '';
+        return `Buscar uma tela no menu${atalho}`;
+    }
+
+    function adicionarBotoesBuscaMenu() {
+        const status = oW5Portal.statusbar;
+        status.insertButton(0, {
+            id: 'barraTarefasBuscaMenuStatus',
+            cls: 'barraTarefasBotaoStatus dbtBuscaMenuStatus dbtGatilhoBuscaMenu',
+            text: '<i class="fa fa-search"></i>',
+            tooltip: dicaBuscaMenu(),
+            hidden: true,
+            handler: () => alternarBuscaMenu()
+        });
+        status.doLayout();
+
+        const alto = oW5Portal.toolbar;
+        if (alto && alto.items && alto.items.getCount()) {
+            const primeiro = alto.items.get(0);
+            // o logotipo é o primeiro item (um componente sem texto, antes dos menus)
+            if (primeiro && !primeiro.text && !primeiro.menu) logoPortal = primeiro;
+            alto.insertButton(0, {
+                id: 'barraTarefasBuscaMenuAlto',
+                cls: 'barraTarefasBotaoStatus dbtBuscaMenuAlto dbtGatilhoBuscaMenu',
+                text: '<i class="fa fa-search"></i>',
+                tooltip: dicaBuscaMenu(),
+                hidden: true,
+                handler: () => alternarBuscaMenu()
+            });
+            alto.doLayout();
+        }
+
+        botaoIniciar = document.createElement('button');
+        botaoIniciar.type = 'button';
+        botaoIniciar.className = 'dbtIniciar dbtGatilhoBuscaMenu';
+        botaoIniciar.hidden = true;
+        const icone = document.createElement('i');
+        icone.className = 'fa fa-search';
+        botaoIniciar.appendChild(icone);
+        botaoIniciar.addEventListener('click', () => alternarBuscaMenu());
+        botaoIniciar.addEventListener('contextmenu', (e) => { e.preventDefault(); exibirMenuBarra(e); });
+        containerBotoes.insertBefore(botaoIniciar, containerBotoes.firstChild);
+        posicionarBotaoBuscaMenu();
+    }
+
+    function posicionarBotaoBuscaMenu() {
+        if (!botaoIniciar) return;                    // ainda não criados
+        const pos = POSICOES_BUSCA_MENU[config.buscaMenuPosicao] ? config.buscaMenuPosicao : 'barra';
+        const naBarra = pos === 'barra' && barraVisivel;
+        botaoIniciar.hidden = !naBarra;
+        botaoIniciar.title = dicaBuscaMenu();
+        containerBotoes.classList.toggle('dbtComIniciar', naBarra);
+        const ajustar = (id, visivel, barra) => {
+            const b = Ext.getCmp(id);
+            if (!b) return;
+            if (b.setTooltip) b.setTooltip(dicaBuscaMenu());
+            if (b.isVisible() !== visivel) { b.setVisible(visivel); barra.doLayout(); }
+        };
+        ajustar('barraTarefasBuscaMenuStatus', pos === 'status' || (pos === 'barra' && !barraVisivel), oW5Portal.statusbar);
+        if (logoPortal && logoPortal.isVisible() === (pos === 'alto')) logoPortal.setVisible(pos !== 'alto');
+        ajustar('barraTarefasBuscaMenuAlto', pos === 'alto', oW5Portal.toolbar);
+    }
+
+    // O botão da busca que está à vista (para o painel abrir junto dele)
+    function gatilhoBuscaMenuVisivel() {
+        const candidatos = [botaoIniciar && !botaoIniciar.hidden ? botaoIniciar : null];
+        ['barraTarefasBuscaMenuStatus', 'barraTarefasBuscaMenuAlto'].forEach(id => {
+            const b = Ext.getCmp(id);
+            if (b && b.isVisible() && b.getEl()) candidatos.push(b.getEl().dom);
+        });
+        return candidatos.find(el => el && el.getBoundingClientRect().width > 0) || null;
     }
 
     function inicializar() {
@@ -7914,6 +8430,7 @@ span.ErrorViewer>div{display:block!important;margin:4px 0!important;padding:6px 
         alturaOriginalStatusbar = oW5Portal.statusbar.getHeight();
         configurarContainer();
         adicionarBotoesStatusbar();
+        adicionarBotoesBuscaMenu();
         protegerArrastoSobreIframes();
         configurarInstrumentacao();
 
