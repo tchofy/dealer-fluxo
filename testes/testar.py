@@ -1707,19 +1707,32 @@ def relatorio(p):
             if radio.is_checked():
                 break
         verificar(radio.is_checked(), "não conseguiu marcar 'Não Recebidos'")
-    antes = p.js("() => oW5Portal.windows.length")
     p.latencia(1500)  # garante alguns segundos de geração mesmo se o servidor estiver rápido
     try:
-        tela.locator("#BTNGERAR").click()
-        p.esperar_js(f"() => oW5Portal.windows.length > {antes}", 20000, "a janela com o relatório não abriu")
-        janela = p.js("() => oW5Portal.windows[oW5Portal.windows.length - 1].id")
-        p.esperar_js(f"() => document.querySelector('#barraDeTarefas button[data-window-id=\"{janela}\"]')?.classList.contains('carregando')",
-                     4000, "o indicador não apareceu enquanto o relatório é gerado")
-        p.botao(outra).click()
-        p.esperar(300)
-        verificar("carregando" in p.classes_botao(janela), "indicador sumiu antes do relatório chegar")
-        p.esperar_js(f"() => document.querySelector('#barraDeTarefas button[data-window-id=\"{janela}\"]').classList.contains('concluido')",
-                     90000, "o ✔ de concluído não apareceu quando o relatório terminou")
+        # O servidor às vezes demora mais de 90s (lento, não é defeito do Fluxo): fecha a janela do relatório e gera de
+        # novo, até 3 vezes. As outras verificações (janela abriu, indicador apareceu) não são repetidas.
+        for tentativa in range(1, 4):
+            antes = p.js("() => oW5Portal.windows.length")
+            tela.locator("#BTNGERAR").click()
+            p.esperar_js(f"() => oW5Portal.windows.length > {antes}", 20000, "a janela com o relatório não abriu")
+            janela = p.js("() => oW5Portal.windows[oW5Portal.windows.length - 1].id")
+            p.esperar_js(f"() => document.querySelector('#barraDeTarefas button[data-window-id=\"{janela}\"]')?.classList.contains('carregando')",
+                         4000, "o indicador não apareceu enquanto o relatório é gerado")
+            p.botao(outra).click()
+            p.esperar(300)
+            verificar("carregando" in p.classes_botao(janela), "indicador sumiu antes do relatório chegar")
+            try:
+                p.esperar_js(f"() => document.querySelector('#barraDeTarefas button[data-window-id=\"{janela}\"]').classList.contains('concluido')",
+                             90000, "o ✔ de concluído não apareceu quando o relatório terminou")
+                break
+            except Falha:
+                if tentativa == 3:
+                    raise
+                print(f"         (o relatório passou de 90s; fechando a janela e gerando de novo: tentativa {tentativa + 1} de 3)", flush=True)
+                p.js(f"() => Ext.getCmp('{janela}').close()")
+                p.esperar_js(f"() => oW5Portal.windows.length === {antes}", 10000, "a janela do relatório não fechou")
+                p.botao(rel).click()   # volta para a tela do relatório, para clicar em Gerar de novo
+                p.esperar(800)
     finally:
         p.latencia(0)
     verificar(p.js(f"""() => !!document.querySelector('#{janela} iframe').contentDocument.querySelector('iframe')
